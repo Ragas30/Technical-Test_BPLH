@@ -57,6 +57,12 @@ const routes = [
         meta: { requiresAuth: true, roles: ['admin', 'reviewer'], title: 'Detail Review' },
     },
     {
+        path: '/activity-logs',
+        name: 'activity-logs.index',
+        component: () => import('../pages/activity-logs/ActivityLogPage.vue'),
+        meta: { requiresAuth: true, title: 'Aktivitas' },
+    },
+    {
         path: '/users',
         name: 'users.index',
         component: () => import('../pages/users/UserListPage.vue'),

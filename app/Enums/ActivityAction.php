@@ -10,6 +10,10 @@ enum ActivityAction: string
 
     case Login = 'login';
     case Logout = 'logout';
+    case UserCreated = 'user_created';
+    case UserUpdated = 'user_updated';
+    case UserDeleted = 'user_deleted';
+    case UserRestored = 'user_restored';
     case ProjectCreated = 'project_created';
     case ProjectUpdated = 'project_updated';
     case ProjectDeleted = 'project_deleted';
@@ -19,5 +23,6 @@ enum ActivityAction: string
     case ReviewStarted = 'review_started';
     case ReviewApproved = 'review_approved';
     case ReviewRejected = 'review_rejected';
+    case ReviewCommented = 'review_commented';
     case RevisionRequested = 'revision_requested';
 }

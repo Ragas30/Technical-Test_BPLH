@@ -27,6 +27,10 @@ export const REVIEW_LOG_ACTIONS = {
 export const ACTION_LABELS = {
     login: 'Login',
     logout: 'Logout',
+    user_created: 'Pengguna dibuat',
+    user_updated: 'Pengguna diperbarui',
+    user_deleted: 'Pengguna dihapus',
+    user_restored: 'Pengguna dipulihkan',
     project_created: 'Project dibuat',
     project_updated: 'Project diperbarui',
     project_deleted: 'Project dihapus',
@@ -36,7 +40,28 @@ export const ACTION_LABELS = {
     review_started: 'Review dimulai',
     review_approved: 'Review disetujui',
     review_rejected: 'Review ditolak',
+    review_commented: 'Komentar',
     revision_requested: 'Revisi diminta',
+};
+
+export const ACTION_BADGES = {
+    login: 'badge-info',
+    logout: 'badge-neutral',
+    user_created: 'badge-success',
+    user_updated: 'badge-info',
+    user_deleted: 'badge-error',
+    user_restored: 'badge-success',
+    project_created: 'badge-primary',
+    project_updated: 'badge-info',
+    project_deleted: 'badge-error',
+    project_submitted: 'badge-info',
+    document_uploaded: 'badge-success',
+    document_deleted: 'badge-error',
+    review_started: 'badge-warning',
+    review_approved: 'badge-success',
+    review_rejected: 'badge-error',
+    review_commented: 'badge-ghost',
+    revision_requested: 'badge-secondary',
 };
 
 export const ROLE_OPTIONS = [

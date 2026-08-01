@@ -103,6 +103,9 @@
                             <RouterLink to="/users">Pengguna</RouterLink>
                         </li>
                     </template>
+                    <li>
+                        <RouterLink to="/activity-logs">Aktivitas</RouterLink>
+                    </li>
                 </ul>
             </aside>
         </div>

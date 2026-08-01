@@ -30,7 +30,13 @@ class ProjectService
 
     public function find(string $id): Project
     {
-        return $this->projectRepository->findOrFail($id)->load('user:id,name,email');
+        return $this->projectRepository->findOrFail($id)->load([
+            'user:id,name,email',
+            'reviews' => fn ($query) => $query->orderByDesc('created_at'),
+            'reviews.reviewer:id,name,email',
+            'reviews.logs' => fn ($query) => $query->orderByDesc('created_at'),
+            'reviews.logs.reviewer:id,name,email',
+        ]);
     }
 
     public function create(CreateProjectDTO $dto, User $user): Project
@@ -95,7 +101,7 @@ class ProjectService
         return DB::transaction(function () use ($id): Project {
             $project = $this->projectRepository->findOrFail($id);
 
-            $this->ensureDraft($project, 'Project dengan status ini tidak dapat diajukan.');
+            $this->ensureSubmittable($project);
 
             $project = $this->projectRepository->update($id, [
                 'status' => ProjectStatus::Submitted,
@@ -113,6 +119,15 @@ class ProjectService
         if ($project->status !== ProjectStatus::Draft) {
             throw ValidationException::withMessages([
                 'status' => [$message],
+            ]);
+        }
+    }
+
+    private function ensureSubmittable(Project $project): void
+    {
+        if (! in_array($project->status, [ProjectStatus::Draft, ProjectStatus::Revision], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Project dengan status ini tidak dapat diajukan.'],
             ]);
         }
     }

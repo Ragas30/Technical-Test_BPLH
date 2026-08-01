@@ -2,6 +2,7 @@
 
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentController;
@@ -49,6 +50,11 @@ Route::get('/user', function (Request $request) {
 
 Route::get('dashboard', [DashboardController::class, 'index'])
     ->middleware('auth:sanctum', 'permission:'.Permission::DashboardView->value);
+
+Route::middleware('auth:sanctum')->prefix('activity-logs')->group(function () {
+    Route::get('/', [ActivityLogController::class, 'index'])->middleware('permission:'.Permission::ActivityViewAny->value);
+    Route::get('mine', [ActivityLogController::class, 'mine'])->middleware('permission:'.Permission::ActivityView->value);
+});
 
 Route::middleware('auth:sanctum')->prefix('projects')->group(function () {
     Route::get('/', [ProjectController::class, 'index'])->middleware('permission:'.Permission::ProjectViewAny->value);

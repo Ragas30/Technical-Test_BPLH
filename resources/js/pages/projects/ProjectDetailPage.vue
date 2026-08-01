@@ -3,6 +3,7 @@
     import { useRoute } from 'vue-router';
     import AppLayout from '../../layouts/AppLayout.vue';
     import ConfirmModal from '../../components/ConfirmModal.vue';
+    import ReviewTimeline from '../../components/reviews/ReviewTimeline.vue';
     import UploadDocumentModal from '../../components/UploadDocumentModal.vue';
     import ReplaceDocumentModal from '../../components/ReplaceDocumentModal.vue';
     import { projectService } from '../../services/projects';
@@ -42,6 +43,13 @@
         () => auth.hasPermission('document.download') && (auth.isAdmin || auth.isReviewer || isOwner.value)
     );
     const canManageDocuments = computed(() => auth.hasPermission('document.upload') && (auth.isAdmin || isOwner.value));
+
+    const canSubmit = computed(
+        () =>
+            isOwner.value &&
+            auth.hasPermission('project.submit') &&
+            (project.value?.status === 'draft' || project.value?.status === 'revision')
+    );
 
     async function loadProject() {
         loading.value = true;
@@ -171,6 +179,35 @@
         }
     }
 
+    function openSubmit() {
+        const isRevision = project.value?.status === 'revision';
+
+        confirmAction.value = {
+            title: isRevision ? 'Ajukan Ulang Project' : 'Ajukan Project',
+            message: isRevision
+                ? `Ajukan ulang project "${project.value?.title}" untuk direview kembali?`
+                : `Ajukan project "${project.value?.title}" untuk review?`,
+            confirmLabel: isRevision ? 'Ajukan Ulang' : 'Ajukan',
+            confirmClass: 'btn-primary',
+            run: submitProject,
+        };
+        confirmModalOpen.value = true;
+    }
+
+    async function submitProject() {
+        try {
+            await projectService.submit(project.value.id);
+            toast.success('Project berhasil diajukan.');
+            await loadProject();
+        } catch (error) {
+            toast.error(
+                error?.response?.data?.errors?.status?.[0] ??
+                    error?.response?.data?.message ??
+                    'Gagal mengajukan project.'
+            );
+        }
+    }
+
     watch(
         () => route.params.id,
         () => loadProject(),
@@ -216,6 +253,10 @@
                         <p class="mt-1 text-sm font-mono text-base-content/50">{{ project.project_number }}</p>
                     </div>
                 </div>
+
+                <button v-if="canSubmit" type="button" class="btn btn-info" @click="openSubmit">
+                    {{ project.status === 'revision' ? 'Ajukan Ulang' : 'Ajukan' }}
+                </button>
 
                 <button v-if="canManageDocuments" type="button" class="btn btn-primary" @click="openUpload">
                     <svg
@@ -368,6 +409,10 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="mt-6">
+                <ReviewTimeline :reviews="project.reviews ?? []" />
             </div>
 
             <UploadDocumentModal v-model="uploadModalOpen" :project-id="project.id" @uploaded="onDocumentsChanged" />

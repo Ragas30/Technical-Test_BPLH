@@ -2,7 +2,9 @@
 
 namespace App\Repositories;
 
+use App\DTO\ActivityLog\ActivityLogQueryDTO;
 use App\Models\ActivityLog;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
 class ActivityLogRepository extends BaseRepository
@@ -20,5 +22,21 @@ class ActivityLogRepository extends BaseRepository
             ->latest('created_at')
             ->limit($limit)
             ->get();
+    }
+
+    public function paginateWithFilters(ActivityLogQueryDTO $dto, ?string $userId = null): LengthAwarePaginator
+    {
+        return $this->model->query()
+            ->with(['user:id,name', 'project:id,project_number,title'])
+            ->when($userId !== null, fn ($query) => $query->where('user_id', $userId))
+            ->when($dto->search !== null, fn ($query) => $query->where(function ($query) use ($dto): void {
+                $pattern = '%'.addcslashes(mb_strtolower($dto->search), '%_\\').'%';
+
+                $query->whereRaw('LOWER(description) LIKE ?', [$pattern])
+                    ->orWhereHas('user', fn ($query) => $query->whereRaw('LOWER(name) LIKE ?', [$pattern]));
+            }))
+            ->when($dto->action !== null, fn ($query) => $query->where('action', $dto->action))
+            ->latest('created_at')
+            ->paginate($dto->perPage);
     }
 }

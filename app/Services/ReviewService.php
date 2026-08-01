@@ -129,6 +129,7 @@ class ReviewService
     {
         return DB::transaction(function () use ($review, $user, $notes): Review {
             $this->logReviewAction($review->project, $review, $user, ReviewAction::Comment, $notes);
+            $this->logActivity($review->project, ActivityAction::ReviewCommented, 'Komentar ditambahkan pada review project '.$review->project->title.'.');
 
             return $this->loadDetails($review);
         });

@@ -41,7 +41,7 @@
     }
 
     function canSubmit(project) {
-        return auth.hasPermission('project.submit') && project.status === 'draft';
+        return auth.hasPermission('project.submit') && (project.status === 'draft' || project.status === 'revision');
     }
 
     function canDelete(project) {
@@ -119,10 +119,14 @@
     }
 
     function openSubmit(project) {
+        const isRevision = project.status === 'revision';
+
         confirmAction.value = {
-            title: 'Ajukan Project',
-            message: `Ajukan project "${project.title}" untuk review?`,
-            confirmLabel: 'Ajukan',
+            title: isRevision ? 'Ajukan Ulang Project' : 'Ajukan Project',
+            message: isRevision
+                ? `Ajukan ulang project "${project.title}" untuk direview kembali?`
+                : `Ajukan project "${project.title}" untuk review?`,
+            confirmLabel: isRevision ? 'Ajukan Ulang' : 'Ajukan',
             confirmClass: 'btn-primary',
             run: () => submitProject(project),
         };
@@ -348,7 +352,7 @@
                                     :disabled="submittingId === project.id"
                                     @click="openSubmit(project)"
                                 >
-                                    Ajukan
+                                    {{ project.status === 'revision' ? 'Ajukan Ulang' : 'Ajukan' }}
                                 </button>
                                 <button
                                     v-if="canDelete(project)"
