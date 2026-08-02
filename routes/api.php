@@ -79,10 +79,12 @@ Route::middleware('auth:sanctum')->prefix('documents')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
-    Route::get('/', [NotificationController::class, 'index']);
-    Route::get('unread-count', [NotificationController::class, 'unreadCount']);
-    Route::post('read-all', [NotificationController::class, 'markAllAsRead']);
-    Route::post('{notification}/read', [NotificationController::class, 'markAsRead'])->whereUuid('notification');
+    Route::get('/', [NotificationController::class, 'index'])->middleware('permission:'.Permission::NotificationView->value);
+    Route::get('unread-count', [NotificationController::class, 'unreadCount'])->middleware('permission:'.Permission::NotificationView->value);
+    Route::post('read-all', [NotificationController::class, 'markAllAsRead'])->middleware('permission:'.Permission::NotificationView->value);
+    Route::post('{notification}/read', [NotificationController::class, 'markAsRead'])
+        ->middleware('permission:'.Permission::NotificationView->value)
+        ->whereUuid('notification');
 });
 
 Route::middleware('auth:sanctum')->prefix('reviews')->group(function () {

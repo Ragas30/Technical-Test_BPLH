@@ -33,7 +33,19 @@ class ExportService
 
     public function projectsPdf(string $filename, ?string $search = null, ?string $status = null): Response
     {
-        return $this->buildPdf($filename, 'Daftar Project', self::PROJECT_HEADERS, $this->projectRows($search, $status));
+        $maxRows = $this->pdfMaxRows();
+        $rows = $this->projectRepository->filteredLimited($maxRows, $search, $status)
+            ->map($this->projectRow())
+            ->all();
+
+        return $this->buildPdf(
+            $filename,
+            'Daftar Project',
+            self::PROJECT_HEADERS,
+            $rows,
+            count($rows) === $maxRows,
+            $maxRows,
+        );
     }
 
     public function reviewsExcel(string $filename, ?string $search = null, ?string $status = null): StreamedResponse
@@ -43,7 +55,19 @@ class ExportService
 
     public function reviewsPdf(string $filename, ?string $search = null, ?string $status = null): Response
     {
-        return $this->buildPdf($filename, 'Daftar Review', self::REVIEW_HEADERS, $this->reviewRows($search, $status));
+        $maxRows = $this->pdfMaxRows();
+        $rows = $this->reviewRepository->filteredLimited($maxRows, $search, $status)
+            ->map($this->reviewRow())
+            ->all();
+
+        return $this->buildPdf(
+            $filename,
+            'Daftar Review',
+            self::REVIEW_HEADERS,
+            $rows,
+            count($rows) === $maxRows,
+            $maxRows,
+        );
     }
 
     /**
@@ -75,26 +99,6 @@ class ExportService
             $review->reviewed_at?->format('d-m-Y H:i') ?? '-',
             $review->notes ?? '-',
         ];
-    }
-
-    /**
-     * @return array<int, array<int, mixed>>
-     */
-    private function projectRows(?string $search, ?string $status): array
-    {
-        return $this->projectRepository->filtered($search, $status)
-            ->map($this->projectRow())
-            ->all();
-    }
-
-    /**
-     * @return array<int, array<int, mixed>>
-     */
-    private function reviewRows(?string $search, ?string $status): array
-    {
-        return $this->reviewRepository->filtered($search, $status)
-            ->map($this->reviewRow())
-            ->all();
     }
 
     /**
@@ -158,10 +162,10 @@ class ExportService
      * @param  array<int, string>  $headers
      * @param  array<int, array<int, mixed>>  $rows
      */
-    private function buildPdf(string $filename, string $title, array $headers, array $rows): Response
+    private function buildPdf(string $filename, string $title, array $headers, array $rows, bool $isTruncated, int $maxRows): Response
     {
         $dompdf = new Dompdf;
-        $dompdf->loadHtml(view('exports.table', compact('title', 'headers', 'rows'))->render());
+        $dompdf->loadHtml(view('exports.table', compact('title', 'headers', 'rows', 'isTruncated', 'maxRows'))->render());
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
 
@@ -169,5 +173,10 @@ class ExportService
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+    }
+
+    private function pdfMaxRows(): int
+    {
+        return max(config('export.pdf_max_rows', 200), 1);
     }
 }

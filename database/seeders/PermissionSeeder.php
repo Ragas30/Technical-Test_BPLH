@@ -29,6 +29,7 @@ class PermissionSeeder extends Seeder
             Permission::ReviewRevision,
             Permission::ReviewComment,
             Permission::ActivityView,
+            Permission::NotificationView,
             Permission::ExportExcel,
             Permission::ExportPdf,
         ],
@@ -43,6 +44,7 @@ class PermissionSeeder extends Seeder
             Permission::DocumentDownload,
             Permission::DocumentDelete,
             Permission::ActivityView,
+            Permission::NotificationView,
         ],
     ];
 

@@ -38,8 +38,8 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
-        $applicant = User::where('email', 'applicant@docflow.test')->first();
-        $reviewer = User::where('email', 'reviewer@docflow.test')->first();
+        $applicant = User::where('email', 'applicant@docflow.test')->firstOrFail();
+        $reviewer = User::where('email', 'reviewer@docflow.test')->firstOrFail();
 
         $projects = collect([
             'approved' => Project::factory()->count(4)->approved()->for($applicant)->sequence(fn () => $this->demoProjectIdentifiers())->create(),

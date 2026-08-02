@@ -20,6 +20,11 @@ class ProjectRepository extends BaseRepository
         return $this->filteredQuery($search, $status)->get();
     }
 
+    public function filteredLimited(int $limit, ?string $search = null, ?string $status = null): Collection
+    {
+        return $this->filteredQuery($search, $status)->limit($limit)->get();
+    }
+
     /**
      * @param  callable(Collection<int, Project>): void  $callback
      */

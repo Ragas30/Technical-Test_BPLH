@@ -16,6 +16,13 @@
                 margin: 0 0 16px;
                 color: #6b7280;
             }
+            .notice {
+                margin: 0 0 16px;
+                padding: 8px 10px;
+                background: #fff7ed;
+                border: 1px solid #fdba74;
+                color: #9a3412;
+            }
             table {
                 width: 100%;
                 border-collapse: collapse;
@@ -36,6 +43,11 @@
     <body>
         <h1>{{ $title }}</h1>
         <p>Dibuat pada {{ now()->format('d-m-Y H:i') }}</p>
+        @if (! empty($isTruncated))
+            <p class="notice">
+                PDF dibatasi ke {{ $maxRows }} baris pertama agar proses export tetap stabil. Gunakan export Excel untuk data lengkap.
+            </p>
+        @endif
         <table>
             <thead>
                 <tr>

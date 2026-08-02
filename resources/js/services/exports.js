@@ -5,7 +5,7 @@ function triggerDownload(response, fallbackName) {
     const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
     const filename = match ? decodeURIComponent(match[1]) : fallbackName;
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const url = window.URL.createObjectURL(response.data);
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
