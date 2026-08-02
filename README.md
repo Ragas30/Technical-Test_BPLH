@@ -81,7 +81,7 @@ Salin `.env.example` ke `.env` lalu sesuaikan:
 php artisan db:seed
 ```
 
-Seeder membuat role (`admin`, `reviewer`, `applicant`), seluruh permission, akun admin default, serta **1000 akun pemohon** (`pemohon001@docflow.test` … `pemohon1000@docflow.test`) dan **1000 akun penilai** (`penilai001@docflow.test` … `penilai1000@docflow.test`) dengan 1000 Project Permohonan (`php artisan db:seed` otomatis menjalankan `BulkDataSeeder`).
+Seeder membuat role (`admin`, `reviewer`, `applicant`), seluruh permission, akun admin default, serta **1000 akun pemohon** (`pemohon001@docflow.test` … `pemohon1000@docflow.test`) dan **1000 akun penilai** (`penilai001@docflow.test` … `penilai1000@docflow.test`) dengan **10000 Project Permohonan** yang terhubung ke pemohon dan penilai (`php artisan db:seed` otomatis menjalankan `BulkDataSeeder`).
 
 Bila hanya ingin data bulk (tanpa mengulang semua):
 

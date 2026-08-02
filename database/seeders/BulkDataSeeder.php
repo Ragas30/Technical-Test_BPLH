@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Enums\ProjectStatus;
+use App\Enums\ReviewAction;
+use App\Enums\ReviewStatus;
 use App\Enums\Role;
 use App\Models\Project;
 use App\Models\User;
@@ -14,33 +16,35 @@ use Illuminate\Support\Str;
 
 class BulkDataSeeder extends Seeder
 {
-    private const APPLICANT_COUNT = 1000;
+    public const APPLICANT_COUNT = 1000;
 
-    private const REVIEWER_COUNT = 1000;
+    public const REVIEWER_COUNT = 1000;
 
-    private const PROJECT_COUNT = 1000;
+    public const PROJECT_COUNT = 10000;
 
     private const USER_CHUNK = 500;
 
     private const PROJECT_CHUNK = 500;
 
+    private const REVIEW_CHUNK = 1000;
+
     public function run(): void
     {
-        $existingApplicants = User::where('email', 'like', 'pemohon%@docflow.test')->count();
-        $existingReviewers = User::where('email', 'like', 'penilai%@docflow.test')->count();
-
-        if ($existingApplicants >= self::APPLICANT_COUNT && $existingReviewers >= self::REVIEWER_COUNT) {
-            $this->command->info("Bulk data sudah ada (pemohon: {$existingApplicants}, penilai: {$existingReviewers}). Seeder dilewati.");
-
-            return;
-        }
-
         $this->seedUsersAndRoles();
         $this->seedProjects();
     }
 
     private function seedUsersAndRoles(): void
     {
+        $existingApplicants = User::where('email', 'like', 'pemohon%@docflow.test')->count();
+        $existingReviewers = User::where('email', 'like', 'penilai%@docflow.test')->count();
+
+        if ($existingApplicants >= self::APPLICANT_COUNT && $existingReviewers >= self::REVIEWER_COUNT) {
+            $this->command->info("Data bulk pemohon & penilai sudah lengkap (pemohon: {$existingApplicants}, penilai: {$existingReviewers}). Seeder dilewati.");
+
+            return;
+        }
+
         $password = Hash::make('password');
         $now = now();
         $modelType = (new User)->getMorphClass();
@@ -65,11 +69,11 @@ class BulkDataSeeder extends Seeder
         }
 
         foreach (array_chunk($userRows, self::USER_CHUNK) as $chunk) {
-            User::insert($chunk);
+            User::insertOrIgnore($chunk);
         }
 
         foreach (array_chunk($roleRows, 1000) as $chunk) {
-            DB::table('model_has_roles')->insert($chunk);
+            DB::table('model_has_roles')->insertOrIgnore($chunk);
         }
 
         $this->command->info('Pemohon: '.self::APPLICANT_COUNT.' dan Penilai: '.self::REVIEWER_COUNT.' berhasil dibuat (password: password).');
@@ -107,10 +111,19 @@ class BulkDataSeeder extends Seeder
 
     private function seedProjects(): void
     {
+        $existingProjects = Project::where('slug', 'like', 'permohonan-lingkungan-%')->count();
+
+        if ($existingProjects >= self::PROJECT_COUNT) {
+            $this->command->info("Project bulk sudah ada ({$existingProjects}). Seeder dilewati.");
+
+            return;
+        }
+
         $now = now();
         $applicantIds = User::where('email', 'like', 'pemohon%@docflow.test')->orderBy('email')->pluck('id')->all();
+        $reviewerIds = User::where('email', 'like', 'penilai%@docflow.test')->orderBy('email')->pluck('id')->all();
 
-        $maxNumber = (int) preg_replace('/\D+/', '', (string) Project::max('project_number'));
+        $maxNumber = (int) preg_replace('/\D+/', '', (string) Project::withTrashed()->max('project_number'));
         $startNumber = max($maxNumber + 1, 1);
 
         $statuses = $this->statusDistribution();
@@ -118,36 +131,58 @@ class BulkDataSeeder extends Seeder
         $companies = $this->companyNames();
 
         $projectRows = [];
-        for ($i = 0; $i < self::PROJECT_COUNT; $i++) {
-            $number = $startNumber + $i;
+        $reviewRows = [];
+        $reviewLogRows = [];
+
+        for ($i = $existingProjects; $i < self::PROJECT_COUNT; $i++) {
+            $number = $startNumber + ($i - $existingProjects);
             $status = $statuses[$i % count($statuses)];
             $template = $titleTemplates[$i % count($titleTemplates)];
             $company = $companies[$i % count($companies)];
             $isSubmitted = $status !== ProjectStatus::Draft->value;
+            $projectId = (string) Str::uuid();
+            $createdAt = $now->copy()->subDays($i % 30);
+            $submittedAt = $isSubmitted ? $now->copy()->subDays($i % 30) : null;
 
             $projectRows[] = [
-                'id' => (string) Str::uuid(),
+                'id' => $projectId,
                 'user_id' => $applicantIds[$i % count($applicantIds)],
                 'project_number' => 'PRJ-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
                 'slug' => 'permohonan-lingkungan-'.$number,
                 'title' => "{$template} - {$company} (#{$number})",
                 'description' => "Permohonan dokumen lingkungan dari {$company} berupa {$template}. Pengajuan ini diwakili oleh pemohon terdaftar pada sistem DocFlow.",
                 'status' => $status,
-                'submitted_at' => $isSubmitted ? $now->copy()->subDays($i % 30) : null,
-                'created_at' => $now->copy()->subDays($i % 30),
+                'submitted_at' => $submittedAt,
+                'created_at' => $createdAt,
                 'updated_at' => $now,
             ];
+
+            $reviewData = $this->reviewSeedDataForStatus($status, $projectId, $reviewerIds[$i % count($reviewerIds)], $submittedAt, $createdAt, $now);
+
+            if ($reviewData !== null) {
+                $reviewRows[] = $reviewData['review'];
+                $reviewLogRows[] = $reviewData['log'];
+            }
         }
 
         foreach (array_chunk($projectRows, self::PROJECT_CHUNK) as $chunk) {
             Project::insert($chunk);
         }
 
-        $this->command->info('Project Permohonan: '.self::PROJECT_COUNT.' berhasil dibuat.');
+        foreach (array_chunk($reviewRows, self::REVIEW_CHUNK) as $chunk) {
+            DB::table('reviews')->insert($chunk);
+        }
+
+        foreach (array_chunk($reviewLogRows, self::REVIEW_CHUNK) as $chunk) {
+            DB::table('review_logs')->insert($chunk);
+        }
+
+        $this->command->info('Project Permohonan: '.count($projectRows).' berhasil dibuat.');
+        $this->command->info('Review bulk: '.count($reviewRows).' berhasil dibuat dan terhubung ke penilai.');
     }
 
     /**
-     * Distribusi status (100 baris, diulang untuk total 1000 project).
+     * Distribusi status (100 baris, diulang untuk total 10000 project).
      *
      * @return list<string>
      */
@@ -206,6 +241,74 @@ class BulkDataSeeder extends Seeder
             'PT Sinergi Lingkungan',
             'CV Citra Hijau Abadi',
             'PT Nusantara Bumi Sejahtera',
+        ];
+    }
+
+    /**
+     * @return array{review: array<string, mixed>, log: array<string, mixed>}|null
+     */
+    private function reviewSeedDataForStatus(
+        string $projectStatus,
+        string $projectId,
+        string $reviewerId,
+        ?Carbon $submittedAt,
+        Carbon $createdAt,
+        Carbon $now,
+    ): ?array {
+        $reviewStatus = match ($projectStatus) {
+            ProjectStatus::Submitted->value => ReviewStatus::Pending,
+            ProjectStatus::UnderReview->value => ReviewStatus::UnderReview,
+            ProjectStatus::Revision->value => ReviewStatus::Revision,
+            ProjectStatus::Approved->value => ReviewStatus::Approved,
+            ProjectStatus::Rejected->value => ReviewStatus::Rejected,
+            default => null,
+        };
+
+        if ($reviewStatus === null) {
+            return null;
+        }
+
+        $reviewId = (string) Str::uuid();
+        $reviewedAt = in_array($reviewStatus, [ReviewStatus::Revision, ReviewStatus::Approved, ReviewStatus::Rejected], true)
+            ? $now->copy()->subDays(random_int(0, 14))
+            : null;
+        $notes = match ($reviewStatus) {
+            ReviewStatus::Revision => 'Mohon lengkapi dokumen pendukung dan perbaiki isian.',
+            ReviewStatus::Approved => 'Dokumen dan data pengajuan telah sesuai.',
+            ReviewStatus::Rejected => 'Pengajuan belum memenuhi ketentuan administrasi.',
+            default => null,
+        };
+        $action = match ($reviewStatus) {
+            ReviewStatus::Pending, ReviewStatus::UnderReview => ReviewAction::UnderReview,
+            ReviewStatus::Revision => ReviewAction::Revision,
+            ReviewStatus::Approved => ReviewAction::Approved,
+            ReviewStatus::Rejected => ReviewAction::Rejected,
+        };
+        $reviewCreatedAt = $submittedAt ?? $createdAt;
+        $logCreatedAt = $reviewedAt ?? $reviewCreatedAt;
+
+        return [
+            'review' => [
+                'id' => $reviewId,
+                'project_id' => $projectId,
+                'reviewer_id' => $reviewerId,
+                'status' => $reviewStatus->value,
+                'notes' => $notes,
+                'reviewed_at' => $reviewedAt,
+                'created_at' => $reviewCreatedAt,
+                'updated_at' => $reviewedAt ?? $now,
+                'deleted_at' => null,
+            ],
+            'log' => [
+                'id' => (string) Str::uuid(),
+                'project_id' => $projectId,
+                'review_id' => $reviewId,
+                'reviewer_id' => $reviewerId,
+                'action' => $action->value,
+                'notes' => $notes,
+                'created_at' => $logCreatedAt,
+                'updated_at' => $logCreatedAt,
+            ],
         ];
     }
 }

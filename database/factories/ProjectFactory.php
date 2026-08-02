@@ -24,13 +24,24 @@ class ProjectFactory extends Factory
 
         return [
             'user_id' => User::factory(),
-            'project_number' => 'PRJ-'.now()->format('Y').'-'.str_pad((string) fake()->unique()->numberBetween(1, 99999), 5, '0', STR_PAD_LEFT),
+            'project_number' => 'PRJ-'.now()->format('Y').'-'.str_pad((string) self::nextProjectNumber(), 5, '0', STR_PAD_LEFT),
             'slug' => Str::slug($title).'-'.fake()->unique()->numberBetween(1, 999),
             'title' => $title,
             'description' => fake()->paragraph(),
             'status' => ProjectStatus::Draft,
             'submitted_at' => null,
         ];
+    }
+
+    private static function nextProjectNumber(): int
+    {
+        static $start;
+
+        if ($start === null) {
+            $start = (int) Project::withTrashed()->max('project_number');
+        }
+
+        return ++$start;
     }
 
     public function submitted(): static

@@ -9,6 +9,7 @@ use App\Enums\Role;
 use App\Models\Project;
 use App\Models\Review;
 use App\Models\User;
+use Database\Seeders\BulkDataSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission as PermissionModel;
@@ -52,20 +53,23 @@ class DatabaseSeederTest extends TestCase
         $this->assertSame(3, Project::where('user_id', $applicant->id)->where('status', ProjectStatus::Submitted->value)->count());
         $this->assertSame(3, Project::where('user_id', $applicant->id)->where('status', ProjectStatus::Draft->value)->count());
 
-        $this->assertSame(9, Review::count());
-        $this->assertSame(4, Review::where('status', ReviewStatus::Approved->value)->count());
-        $this->assertSame(2, Review::where('status', ReviewStatus::Rejected->value)->count());
-        $this->assertSame(3, Review::where('status', ReviewStatus::Pending->value)->count());
-        $this->assertSame(9, Review::where('reviewer_id', $reviewer->id)->count());
+        $demoProjectIds = Project::where('user_id', $applicant->id)->pluck('id');
+
+        $this->assertSame(9, Review::whereIn('project_id', $demoProjectIds)->count());
+        $this->assertSame(4, Review::whereIn('project_id', $demoProjectIds)->where('status', ReviewStatus::Approved->value)->count());
+        $this->assertSame(2, Review::whereIn('project_id', $demoProjectIds)->where('status', ReviewStatus::Rejected->value)->count());
+        $this->assertSame(3, Review::whereIn('project_id', $demoProjectIds)->where('status', ReviewStatus::Pending->value)->count());
+        $this->assertSame(9, Review::where('reviewer_id', $reviewer->id)->whereIn('project_id', $demoProjectIds)->count());
     }
 
     public function test_database_seeder_creates_bulk_users_and_projects(): void
     {
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertSame(1000, User::where('email', 'like', 'pemohon%@docflow.test')->count());
-        $this->assertSame(1000, User::where('email', 'like', 'penilai%@docflow.test')->count());
-        $this->assertGreaterThanOrEqual(1000, Project::count());
+        $this->assertSame(BulkDataSeeder::APPLICANT_COUNT, User::where('email', 'like', 'pemohon%@docflow.test')->count());
+        $this->assertSame(BulkDataSeeder::REVIEWER_COUNT, User::where('email', 'like', 'penilai%@docflow.test')->count());
+        $this->assertGreaterThanOrEqual(BulkDataSeeder::PROJECT_COUNT, Project::count());
+        $this->assertGreaterThanOrEqual(BulkDataSeeder::PROJECT_COUNT * 60 / 100, Review::count());
 
         $applicant = User::where('email', 'pemohon001@docflow.test')->firstOrFail();
         $reviewer = User::where('email', 'penilai001@docflow.test')->firstOrFail();
