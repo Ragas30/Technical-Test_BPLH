@@ -1,5 +1,7 @@
 @import 'tailwindcss';
-@plugin 'daisyui';
+@plugin 'daisyui' {
+    themes: light --default;
+}
 
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -8,4 +10,46 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+:root {
+    color-scheme: light;
+
+    --color-base-100: oklch(100% 0 0);
+    --color-base-200: oklch(96.5% 0.004 247.858);
+    --color-base-300: oklch(91% 0.006 247.858);
+    --color-base-content: oklch(30% 0.02 257.7);
+
+    --color-primary: oklch(53% 0.226 268);
+    --color-primary-content: oklch(100% 0 0);
+
+    --color-secondary: oklch(55% 0.22 292);
+    --color-secondary-content: oklch(100% 0 0);
+
+    --color-accent: oklch(67% 0.17 237);
+    --color-accent-content: oklch(98% 0.01 237);
+
+    --color-neutral: oklch(32% 0.022 257.7);
+    --color-neutral-content: oklch(98% 0.005 257.7);
+
+    --color-info: oklch(63% 0.16 230);
+    --color-info-content: oklch(98% 0.005 230);
+
+    --color-success: oklch(64% 0.15 155);
+    --color-success-content: oklch(98% 0.005 155);
+
+    --color-warning: oklch(79% 0.16 85);
+    --color-warning-content: oklch(24% 0.06 85);
+
+    --color-error: oklch(62% 0.2 18);
+    --color-error-content: oklch(98% 0.005 18);
+
+    --radius-selector: 0.75rem;
+    --radius-field: 0.75rem;
+    --radius-box: 1rem;
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+    --border: 1px;
+    --depth: 1;
+    --noise: 0;
 }

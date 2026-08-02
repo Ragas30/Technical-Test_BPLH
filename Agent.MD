@@ -571,21 +571,18 @@ Definition of Done
 
 # Phase 16 - Testing
 
-Unit Test
-
-Feature Test
-
-Seeder Test
-
-Authentication Test
-
-CRUD Test
-
-Approval Test
+- [x] Unit Test
+- [x] Feature Test
+- [x] Seeder Test
+- [x] Authentication Test
+- [x] CRUD Test
+- [x] Approval Test
 
 Definition of Done
 
-Semua test lulus.
+- [x] Semua test lulus.
+
+> STATUS: SELESAI — 117 test (Unit + Feature) seluruhnya hijau (`php artisan test`). Cakupan meliputi Auth, Dashboard, User Management, Project CRUD, Upload/Preview/Replace/Delete Dokumen, Review (start/approve/reject/revision/comment), Revision Flow (upload saat revisi, resubmit, siklus ulang hingga approved), Seeder, Export (Excel/PDF), Notification, Activity Log (offset + cursor pagination), serta Role/Permission. Infrastruktur test diperbaiki: `pdo_sqlite` diaktifkan, migration enum di-guard agar hanya jalan di PostgreSQL, query `TO_CHAR` dibuat portabel (`monthExpression`), dan `created_at` ditambahkan ke fillable `ActivityLog` agar timestamps eksplisit dihormati.
 
 ---
 
@@ -613,20 +610,35 @@ docker compose up berhasil.
 
 Checklist
 
-- Semua fitur sesuai PRD.
-- UI responsive.
-- Tidak ada console error.
-- Tidak ada PHP warning.
-- Tidak ada N+1 Query.
-- Tidak ada hardcoded value.
-- Tidak ada duplicate code.
-- Semua endpoint menggunakan API Resource.
-- Semua validasi menggunakan FormRequest.
-- Semua business logic berada di Service.
-- Semua query database berada di Repository.
-- Semua status menggunakan Enum.
-- README selesai.
-- Docker berhasil dijalankan.
+- [x] Semua fitur sesuai PRD.
+- [x] UI responsive.
+- [x] Tidak ada console error.
+- [x] Tidak ada PHP warning.
+- [x] Tidak ada N+1 Query.
+- [x] Tidak ada hardcoded value.
+- [x] Tidak ada duplicate code.
+- [x] Response Setiap Endpoint API Muncul di Network Web
+- [x] Semua endpoint menggunakan API Resource.
+- [x] Semua validasi menggunakan FormRequest.
+- [x] Semua business logic berada di Service.
+- [x] Semua query database berada di Repository.
+- [x] Semua status menggunakan Enum.
+- [x] README selesai.
+- [ ] Docker berhasil dijalankan.
+
+> STATUS: SELESAI (kecuali Docker) — Final review seluruh fase selesai. Temuan audit dan perbaikan yang dilakukan:
+>
+> - **N+1 / lazy loading**: `ReviewService` kini memanggil `ensureProjectLoaded()` sebelum alur keputusan & komentar; `DocumentService` memuat `project` sebelum replace/delete; `UserRepository` eager-load `roles.permissions` sehingga `UserResource::getAllPermissions()` tidak lagi query per-item; `ReviewService::loadDetails` menambahkan kolom `description` (sebelumnya selalu null di response).
+> - **Hardcoded value**: label status di `ExportService` diganti `ProjectStatus::label()` / `ReviewStatus::label()` (enum-driven).
+> - **Clean Architecture**: `NotificationController` diekstrak ke `NotificationService` (sebelumnya query langsung di controller); `ExportController` kini memakai `IndexProjectExportRequest` / `IndexReviewExportRequest` (FormRequest, sebelumnya tanpa validasi).
+> - **Duplicate code**: `logActivity` yang terduplikasi di 5 service (Project/Review/Document/User/Auth) digabung menjadi `ActivityLogService::record()`; pola search `LOWER(...) LIKE` di 4 repository digabung menjadi `BaseRepository::likePattern()`; `filtered()` + `chunkFiltered()` digabung lewat query builder bersama; `statusCounts()`/`monthlyStats()` digabung menjadi `BaseRepository::statusCountsFor()`/`monthlyStatsFor()`; label/color dashboard frontend diturunkan dari `constants/roles.js`.
+> - **PRD compliance**: `DocumentPolicy::update/delete` kini membatasi modifikasi dokumen hanya pada status `Draft`/`Revision` sesuai PRD ("Menghapus dokumen selama status Draft").
+> - **README**: ditulis ulang lengkap (overview, tech stack, fitur, workflow, instalasi, testing, code style, arsitektur).
+> - **Verifikasi**: 117 test hijau (`php artisan test`, 479 assertions), `vendor/bin/pint` lulus, `npm run build` & `npm run lint` (zero warning) lulus.
+> - **Verifikasi API di Network Browser**: item "Response Setiap Endpoint API Muncul di Network Web" diuji langsung. Semua endpoint dibuktikan mengembalikan JSON (`/api/auth/login` → 200 token; `/api/dashboard`, `/api/projects`, `/api/notifications`, `/api/users` → 200; `/api/user` tanpa auth → 401; body kosong → 422). Penyebab "response API tidak muncul" adalah ketergantungan pada Vite dev server: `public/hot` memaksa halaman memuat JS dari `http://[::1]:5173` (IPv6) sehingga bila browser tidak menjangkau alamat itu, app tidak ter-mount dan tidak ada request API. Solusi: hapus `public/hot` dan gunakan `npm run build` → halaman, aset, dan seluruh `/api/*` dilayani single-origin dari `http://localhost:8000` dan pasti tampil di Network (dokumentasi ditambahkan ke README).
+> - **Audit response seluruh endpoint (smoke test live)**: semua controller sudah mengembalikan response. Dibuktikan lewat curl: Auth (login 200, profile GET/PUT 200, logout 200), `GET /api/user`, dashboard, activity-logs (+mine), users (+show), roles, permissions, notifications (+unread-count, read-all), projects (+mine/show/update), submit 200, upload dokumen 201 (field `documents[]`), start review 201, review show/comment/approve 200 (reject/revision setelah approved → 422 sesuai aturan bisnis), dokumen preview/download/replace/delete 200, export Excel/PDF 200. Error case benar: 401 tanpa token, 403 applicant→users, 404 user tidak ada, 422 validasi. **Perbaikan baru**: unknown `GET /api/*` sebelumnya ter-swallow catch-all SPA web (return 200 HTML) — kini `routes/web.php` mengecualikan `api` dan `routes/api.php` menambah `Route::fallback` → 404 JSON. 117 test tetap hijau, pint lulus.
+> - **Belum selesai**: item "Docker berhasil dijalankan" — Phase 17 (Docker) di-skip atas keputusan user, sehingga tidak ada Dockerfile/docker-compose.
+> - **Seeder bulk (ditambahkan pasca-review)**: `BulkDataSeeder` membuat 1000 pemohon (`pemohon001@docflow.test` s.d. `pemohon1000@docflow.test`) dan 1000 penilai (`penilai001@docflow.test` s.d. `penilai1000@docflow.test`), semua password `password`, plus 1000 Project Permohonan milik pemohon dengan distribusi status (draft 40%, submitted 20%, under_review 15%, revision 10%, approved 10%, rejected 5%). Dipakai bulk `insert` ber-chunk agar cepat; nomor project lanjut dari nomor terakhir agar unik. Terdaftar di `DatabaseSeeder` dan dapat dijalankan mandiri via `php artisan db:seed --class=BulkDataSeeder` (idempotent). `DatabaseSeederTest` disesuaikan (assert status di-scope ke user demo) + tes baru untuk bulk data. 118 test hijau (485 assertions).
 
 ---
 

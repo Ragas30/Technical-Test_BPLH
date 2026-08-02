@@ -349,7 +349,7 @@
                             {{ project.user?.name ?? '-' }}
                         </td>
                         <td>
-                            <span class="badge" :class="PROJECT_STATUS[project.status]?.badge ?? 'badge-neutral'">
+                            <span class="badge whitespace-nowrap" :class="PROJECT_STATUS[project.status]?.badge ?? 'badge-neutral'">
                                 {{ PROJECT_STATUS[project.status]?.label ?? project.status }}
                             </span>
                         </td>

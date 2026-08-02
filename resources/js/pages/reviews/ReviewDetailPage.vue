@@ -184,7 +184,7 @@
                     <div>
                         <div class="flex items-center gap-2">
                             <h2 class="text-2xl font-semibold">{{ review.project?.title }}</h2>
-                            <span class="badge" :class="REVIEW_STATUS[review.status]?.badge ?? 'badge-neutral'">
+                            <span class="badge whitespace-nowrap" :class="REVIEW_STATUS[review.status]?.badge ?? 'badge-neutral'">
                                 {{ REVIEW_STATUS[review.status]?.label ?? review.status }}
                             </span>
                         </div>
@@ -261,7 +261,7 @@
                                     <p class="text-xs font-semibold text-base-content/50">Status Project</p>
                                     <p class="mt-1">
                                         <span
-                                            class="badge"
+                                            class="badge whitespace-nowrap"
                                             :class="PROJECT_STATUS[review.project?.status]?.badge ?? 'badge-neutral'"
                                         >
                                             {{
@@ -377,7 +377,7 @@
                             </div>
                             <div class="timeline-end timeline-box">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <span class="badge" :class="REVIEW_LOG_ACTIONS[log.action]?.badge ?? 'badge-ghost'">
+                                    <span class="badge whitespace-nowrap" :class="REVIEW_LOG_ACTIONS[log.action]?.badge ?? 'badge-ghost'">
                                         {{ REVIEW_LOG_ACTIONS[log.action]?.label ?? log.action }}
                                     </span>
                                     <span class="text-xs text-base-content/50">{{ formatDate(log.created_at) }}</span>

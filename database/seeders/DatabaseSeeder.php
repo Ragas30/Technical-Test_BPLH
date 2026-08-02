@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             ReviewerSeeder::class,
             ApplicantSeeder::class,
+            BulkDataSeeder::class,
         ]);
 
         $this->seedDemoData();

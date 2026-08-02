@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\NotificationResource;
+use App\Services\NotificationService;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class NotificationController extends Controller
 {
+    public function __construct(private readonly NotificationService $notificationService) {}
+
     #[Response(200, 'Daftar notifikasi milik pengguna yang sedang login beserta jumlah belum dibaca.', examples: [[
         'data' => [
             [
@@ -38,37 +41,35 @@ class NotificationController extends Controller
     ]])]
     public function index(Request $request): AnonymousResourceCollection
     {
-        $notifications = $request->user()->notifications()->paginate(15);
-
-        return NotificationResource::collection($notifications)->additional([
-            'unread_count' => $request->user()->unreadNotifications()->count(),
-        ]);
+        return NotificationResource::collection($this->notificationService->paginate($request->user()))
+            ->additional([
+                'unread_count' => $this->notificationService->unreadCount($request->user()),
+            ]);
     }
 
     #[Response(200, 'Jumlah notifikasi yang belum dibaca.', examples: [['unread_count' => 1]])]
     public function unreadCount(Request $request): JsonResponse
     {
         return response()->json([
-            'unread_count' => $request->user()->unreadNotifications()->count(),
+            'unread_count' => $this->notificationService->unreadCount($request->user()),
         ]);
     }
 
     #[Response(200, 'Notifikasi ditandai telah dibaca.', examples: [['message' => 'Notifikasi ditandai telah dibaca.', 'unread_count' => 0]])]
     public function markAsRead(Request $request, string $notification): JsonResponse
     {
-        $notification = $request->user()->notifications()->whereKey($notification)->firstOrFail();
-        $notification->markAsRead();
+        $this->notificationService->markAsRead($request->user(), $notification);
 
         return response()->json([
             'message' => 'Notifikasi ditandai telah dibaca.',
-            'unread_count' => $request->user()->unreadNotifications()->count(),
+            'unread_count' => $this->notificationService->unreadCount($request->user()),
         ]);
     }
 
     #[Response(200, 'Semua notifikasi ditandai telah dibaca.', examples: [['message' => 'Semua notifikasi telah dibaca.', 'unread_count' => 0]])]
     public function markAllAsRead(Request $request): JsonResponse
     {
-        $request->user()->unreadNotifications()->update(['read_at' => now()]);
+        $this->notificationService->markAllAsRead($request->user());
 
         return response()->json([
             'message' => 'Semua notifikasi telah dibaca.',

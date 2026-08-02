@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE activity_logs DROP CONSTRAINT '.self::CONSTRAINT);
 
         DB::statement(
@@ -26,6 +30,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE activity_logs DROP CONSTRAINT '.self::CONSTRAINT);
 
         DB::statement(

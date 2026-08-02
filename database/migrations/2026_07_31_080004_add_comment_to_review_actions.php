@@ -32,6 +32,10 @@ return new class extends Migration
      */
     private function setAllowedActions(array $actions): void
     {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE review_logs DROP CONSTRAINT IF EXISTS '.self::CONSTRAINT);
 
         DB::statement(sprintf(

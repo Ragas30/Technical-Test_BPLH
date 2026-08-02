@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Notifications\CommentAddedNotification;
 use App\Notifications\ReviewDecisionNotification;
 use App\Notifications\ReviewStartedNotification;
-use App\Repositories\ActivityLogRepository;
 use App\Repositories\ProjectRepository;
 use App\Repositories\ReviewLogRepository;
 use App\Repositories\ReviewRepository;
@@ -29,7 +28,7 @@ class ReviewService
         private readonly ReviewRepository $reviewRepository,
         private readonly ReviewLogRepository $reviewLogRepository,
         private readonly ProjectRepository $projectRepository,
-        private readonly ActivityLogRepository $activityLogRepository,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function paginate(ReviewQueryDTO $dto, ?string $reviewerId = null): LengthAwarePaginator
@@ -62,7 +61,7 @@ class ReviewService
             $this->projectRepository->update($project->id, ['status' => ProjectStatus::UnderReview]);
 
             $this->logReviewAction($project, $review, $reviewer, ReviewAction::UnderReview, null);
-            $this->logActivity($project, ActivityAction::ReviewStarted, 'Review project '.$project->title.' dimulai.');
+            $this->activityLogService->record(ActivityAction::ReviewStarted, 'Review project '.$project->title.' dimulai.', project: $project);
 
             return $this->loadDetails($review);
         });
@@ -74,6 +73,8 @@ class ReviewService
 
     public function approve(Review $review, User $user, ?string $notes): Review
     {
+        $this->ensureProjectLoaded($review);
+
         $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->ensureUnderReview($review);
 
@@ -98,6 +99,8 @@ class ReviewService
 
     public function reject(Review $review, User $user, string $notes): Review
     {
+        $this->ensureProjectLoaded($review);
+
         $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->ensureUnderReview($review);
             $this->ensureNotes($notes);
@@ -123,6 +126,8 @@ class ReviewService
 
     public function requestRevision(Review $review, User $user, string $notes): Review
     {
+        $this->ensureProjectLoaded($review);
+
         $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->ensureUnderReview($review);
             $this->ensureNotes($notes);
@@ -148,9 +153,11 @@ class ReviewService
 
     public function comment(Review $review, User $user, string $notes): Review
     {
+        $this->ensureProjectLoaded($review);
+
         $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->logReviewAction($review->project, $review, $user, ReviewAction::Comment, $notes);
-            $this->logActivity($review->project, ActivityAction::ReviewCommented, 'Komentar ditambahkan pada review project '.$review->project->title.'.');
+            $this->activityLogService->record(ActivityAction::ReviewCommented, 'Komentar ditambahkan pada review project '.$review->project->title.'.', project: $review->project);
 
             return $this->loadDetails($review);
         });
@@ -179,7 +186,7 @@ class ReviewService
         $this->projectRepository->update($review->project_id, ['status' => $projectStatus]);
 
         $this->logReviewAction($review->project, $review, $user, $action, $notes);
-        $this->logActivity($review->project, $activityAction, $description);
+        $this->activityLogService->record($activityAction, $description, project: $review->project);
 
         $review->refresh();
     }
@@ -228,25 +235,19 @@ class ReviewService
         ]);
     }
 
-    private function logActivity(Project $project, ActivityAction $action, string $description): void
-    {
-        $this->activityLogRepository->create([
-            'user_id' => auth()->id(),
-            'project_id' => $project->id,
-            'action' => $action,
-            'description' => $description,
-            'properties' => ['project_number' => $project->project_number],
-        ]);
-    }
-
     private function loadDetails(Review $review): Review
     {
         return $review->load([
-            'project:id,title,project_number,status,user_id',
+            'project:id,title,description,project_number,status,user_id',
             'project.user:id,name',
             'reviewer:id,name,email',
             'logs.reviewer:id,name,email',
         ]);
+    }
+
+    private function ensureProjectLoaded(Review $review): void
+    {
+        $review->loadMissing('project.user:id,name,email');
     }
 
     private function notifyApplicant(Review $review, Notification $notification): void

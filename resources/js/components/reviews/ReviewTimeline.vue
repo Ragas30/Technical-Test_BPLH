@@ -46,7 +46,7 @@
 
                 <div v-else class="space-y-3 text-sm">
                     <div class="flex flex-wrap items-center gap-2">
-                        <span class="badge" :class="statusBadge(latest.status)">
+                        <span class="badge whitespace-nowrap" :class="statusBadge(latest.status)">
                             {{ statusLabel(latest.status) }}
                         </span>
                         <span v-if="latest.reviewer" class="text-base-content/60">oleh {{ latest.reviewer.name }}</span>
@@ -90,7 +90,7 @@
                         </div>
                         <div class="timeline-end timeline-box">
                             <div class="flex flex-wrap items-center justify-between gap-2">
-                                <span class="badge" :class="actionBadge(log.action)">
+                                <span class="badge whitespace-nowrap" :class="actionBadge(log.action)">
                                     {{ actionLabel(log.action) }}
                                 </span>
                                 <span class="text-xs text-base-content/50">{{ formatDate(log.created_at) }}</span>

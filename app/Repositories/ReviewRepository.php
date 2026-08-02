@@ -6,6 +6,7 @@ use App\DTO\Review\ReviewQueryDTO;
 use App\Enums\ReviewStatus;
 use App\Models\Review;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class ReviewRepository extends BaseRepository
@@ -17,17 +18,7 @@ class ReviewRepository extends BaseRepository
 
     public function filtered(?string $search = null, ?string $status = null): Collection
     {
-        return $this->model->query()
-            ->with(['project:id,title,project_number,status', 'reviewer:id,name,email'])
-            ->when($search !== null, fn ($query) => $query->whereHas('project', function ($query) use ($search): void {
-                $pattern = '%'.addcslashes(mb_strtolower($search), '%_\\').'%';
-
-                $query->whereRaw('LOWER(title) LIKE ?', [$pattern])
-                    ->orWhereRaw('LOWER(project_number) LIKE ?', [$pattern]);
-            }))
-            ->when($status !== null, fn ($query) => $query->where('status', $status))
-            ->orderBy('created_at', 'desc')
-            ->get();
+        return $this->filteredQuery($search, $status)->get();
     }
 
     /**
@@ -35,17 +26,21 @@ class ReviewRepository extends BaseRepository
      */
     public function chunkFiltered(?string $search, ?string $status, int $size, callable $callback): void
     {
-        $this->model->query()
+        $this->filteredQuery($search, $status)->chunk($size, $callback);
+    }
+
+    private function filteredQuery(?string $search = null, ?string $status = null): Builder
+    {
+        return $this->model->query()
             ->with(['project:id,title,project_number,status', 'reviewer:id,name,email'])
             ->when($search !== null, fn ($query) => $query->whereHas('project', function ($query) use ($search): void {
-                $pattern = '%'.addcslashes(mb_strtolower($search), '%_\\').'%';
+                $pattern = $this->likePattern($search);
 
                 $query->whereRaw('LOWER(title) LIKE ?', [$pattern])
                     ->orWhereRaw('LOWER(project_number) LIKE ?', [$pattern]);
             }))
             ->when($status !== null, fn ($query) => $query->where('status', $status))
-            ->orderBy('created_at', 'desc')
-            ->chunk($size, $callback);
+            ->orderBy('created_at', 'desc');
     }
 
     public function hasActiveReview(string $projectId): bool
@@ -62,7 +57,7 @@ class ReviewRepository extends BaseRepository
             ->with(['project:id,title,project_number,status', 'reviewer:id,name,email'])
             ->when($reviewerId !== null, fn ($query) => $query->where('reviewer_id', $reviewerId))
             ->when($dto->search !== null, fn ($query) => $query->whereHas('project', function ($query) use ($dto): void {
-                $pattern = '%'.addcslashes(mb_strtolower($dto->search), '%_\\').'%';
+                $pattern = $this->likePattern($dto->search);
 
                 $query->whereRaw('LOWER(title) LIKE ?', [$pattern])
                     ->orWhereRaw('LOWER(project_number) LIKE ?', [$pattern]);
@@ -77,13 +72,7 @@ class ReviewRepository extends BaseRepository
      */
     public function statusCounts(?string $reviewerId = null): array
     {
-        return $this->model->query()
-            ->when($reviewerId !== null, fn ($query) => $query->where('reviewer_id', $reviewerId))
-            ->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status')
-            ->map(fn ($total) => (int) $total)
-            ->all();
+        return $this->statusCountsFor('status', 'reviewer_id', $reviewerId);
     }
 
     /**
@@ -91,23 +80,7 @@ class ReviewRepository extends BaseRepository
      */
     public function monthlyStats(?string $reviewerId = null, int $months = 6): array
     {
-        $counts = $this->model->query()
-            ->when($reviewerId !== null, fn ($query) => $query->where('reviewer_id', $reviewerId))
-            ->where('created_at', '>=', now()->subMonths($months - 1)->startOfMonth())
-            ->selectRaw("TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as total")
-            ->groupBy('month')
-            ->pluck('total', 'month')
-            ->map(fn ($total) => (int) $total)
-            ->all();
-
-        $result = [];
-
-        for ($i = $months - 1; $i >= 0; $i--) {
-            $month = now()->subMonths($i)->format('Y-m');
-            $result[] = ['month' => $month, 'total' => $counts[$month] ?? 0];
-        }
-
-        return $result;
+        return $this->monthlyStatsFor('reviewer_id', $reviewerId, $months);
     }
 
     public function latest(?string $reviewerId = null, int $limit = 10): Collection

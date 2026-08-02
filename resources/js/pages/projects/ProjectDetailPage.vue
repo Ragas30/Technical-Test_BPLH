@@ -246,7 +246,7 @@
                     <div>
                         <div class="flex items-center gap-2">
                             <h2 class="text-2xl font-semibold">{{ project.title }}</h2>
-                            <span class="badge" :class="PROJECT_STATUS[project.status]?.badge ?? 'badge-neutral'">
+                            <span class="badge whitespace-nowrap" :class="PROJECT_STATUS[project.status]?.badge ?? 'badge-neutral'">
                                 {{ PROJECT_STATUS[project.status]?.label ?? project.status }}
                             </span>
                         </div>

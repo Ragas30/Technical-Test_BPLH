@@ -177,7 +177,7 @@
                             {{ review.reviewer?.name ?? '-' }}
                         </td>
                         <td>
-                            <span class="badge" :class="REVIEW_STATUS[review.status]?.badge ?? 'badge-neutral'">
+                            <span class="badge whitespace-nowrap" :class="REVIEW_STATUS[review.status]?.badge ?? 'badge-neutral'">
                                 {{ REVIEW_STATUS[review.status]?.label ?? review.status }}
                             </span>
                         </td>

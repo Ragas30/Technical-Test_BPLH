@@ -100,3 +100,7 @@ Route::middleware('auth:sanctum')->prefix('export')->group(function () {
     Route::get('reviews', [ExportController::class, 'reviews'])->middleware('permission:'.Permission::ExportExcel->value);
     Route::get('reviews/pdf', [ExportController::class, 'reviewsPdf'])->middleware('permission:'.Permission::ExportPdf->value);
 });
+
+Route::fallback(function () {
+    return response()->json(['message' => 'Endpoint tidak ditemukan.'], 404);
+});

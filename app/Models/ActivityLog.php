@@ -20,6 +20,7 @@ class ActivityLog extends Model
         'action',
         'description',
         'properties',
+        'created_at',
     ];
 
     protected function casts(): array

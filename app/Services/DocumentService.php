@@ -8,7 +8,6 @@ use App\Enums\ActivityAction;
 use App\Models\Project;
 use App\Models\ProjectDocument;
 use App\Models\User;
-use App\Repositories\ActivityLogRepository;
 use App\Repositories\DocumentRepository;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -21,7 +20,7 @@ class DocumentService
 {
     public function __construct(
         private readonly DocumentRepository $documentRepository,
-        private readonly ActivityLogRepository $activityLogRepository,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function listForProject(string $projectId): Collection
@@ -47,7 +46,7 @@ class DocumentService
 
             $documents = $this->documentRepository->findManyWithUploader($attributes->pluck('id')->all());
 
-            $this->logActivity($project, ActivityAction::DocumentUploaded, $documents->count().' dokumen diunggah ke project '.$project->title.'.');
+            $this->activityLogService->record(ActivityAction::DocumentUploaded, $documents->count().' dokumen diunggah ke project '.$project->title.'.', project: $project);
 
             return $documents;
         });
@@ -55,13 +54,15 @@ class DocumentService
 
     public function replace(ProjectDocument $document, ReplaceDocumentDTO $dto): ProjectDocument
     {
+        $document->loadMissing('project');
+
         return DB::transaction(function () use ($document, $dto): ProjectDocument {
             $this->storeFileReplacement($document, $dto->file);
 
-            $this->logActivity(
-                $document->project,
+            $this->activityLogService->record(
                 ActivityAction::DocumentUploaded,
                 'Dokumen '.$document->original_name.' pada project '.$document->project->title.' diperbarui.',
+                project: $document->project,
             );
 
             return $document->fresh()->load('uploader:id,name,email');
@@ -70,15 +71,17 @@ class DocumentService
 
     public function delete(ProjectDocument $document): void
     {
+        $document->loadMissing('project');
+
         DB::transaction(function () use ($document): void {
             Storage::disk(config('documents.disk'))->delete($document->path);
 
             $this->documentRepository->delete($document->id);
 
-            $this->logActivity(
-                $document->project,
+            $this->activityLogService->record(
                 ActivityAction::DocumentDeleted,
                 'Dokumen '.$document->original_name.' pada project '.$document->project->title.' dihapus.',
+                project: $document->project,
             );
         });
     }
@@ -138,17 +141,6 @@ class DocumentService
             'mime_type' => $file->getMimeType(),
             'extension' => $extension,
             'size' => $file->getSize(),
-        ]);
-    }
-
-    private function logActivity(Project $project, ActivityAction $action, string $description): void
-    {
-        $this->activityLogRepository->create([
-            'user_id' => auth()->id(),
-            'project_id' => $project->id,
-            'action' => $action,
-            'description' => $description,
-            'properties' => ['project_number' => $project->project_number],
         ]);
     }
 }

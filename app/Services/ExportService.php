@@ -21,23 +21,6 @@ class ExportService
 
     private const REVIEW_HEADERS = ['Nomor Project', 'Judul', 'Reviewer', 'Status', 'Mulai', 'Diputuskan', 'Catatan'];
 
-    private const PROJECT_STATUS_LABELS = [
-        'draft' => 'Draft',
-        'submitted' => 'Diajukan',
-        'under_review' => 'Sedang Ditinjau',
-        'revision' => 'Revisi',
-        'rejected' => 'Ditolak',
-        'approved' => 'Disetujui',
-    ];
-
-    private const REVIEW_STATUS_LABELS = [
-        'pending' => 'Menunggu',
-        'under_review' => 'Sedang Ditinjau',
-        'approved' => 'Disetujui',
-        'rejected' => 'Ditolak',
-        'revision' => 'Revisi',
-    ];
-
     public function __construct(
         private readonly ProjectRepository $projectRepository,
         private readonly ReviewRepository $reviewRepository,
@@ -72,7 +55,7 @@ class ExportService
             $project->project_number,
             $project->title,
             $project->user?->name ?? '-',
-            self::PROJECT_STATUS_LABELS[$project->status->value] ?? $project->status->value,
+            $project->status->label(),
             $project->submitted_at?->format('d-m-Y H:i') ?? '-',
             $project->created_at?->format('d-m-Y H:i') ?? '-',
         ];
@@ -87,7 +70,7 @@ class ExportService
             $review->project?->project_number ?? '-',
             $review->project?->title ?? '-',
             $review->reviewer?->name ?? '-',
-            self::REVIEW_STATUS_LABELS[$review->status->value] ?? $review->status->value,
+            $review->status->label(),
             $review->created_at?->format('d-m-Y H:i') ?? '-',
             $review->reviewed_at?->format('d-m-Y H:i') ?? '-',
             $review->notes ?? '-',

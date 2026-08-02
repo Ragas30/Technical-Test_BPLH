@@ -10,7 +10,6 @@ use App\DTO\Auth\UpdateProfileDTO;
 use App\Enums\ActivityAction;
 use App\Enums\Role;
 use App\Models\User;
-use App\Repositories\ActivityLogRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +33,7 @@ class AuthService
 
     public function __construct(
         private readonly UserRepository $userRepository,
-        private readonly ActivityLogRepository $activityLogRepository,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function register(RegisterUserDTO $dto): array
@@ -50,7 +49,7 @@ class AuthService
             $user->assignRole(Role::Applicant);
             $user->load('roles', 'permissions');
 
-            $this->logActivity($user, ActivityAction::UserCreated, 'Akun '.$user->name.' didaftarkan.');
+            $this->activityLogService->record(ActivityAction::UserCreated, 'Akun '.$user->name.' didaftarkan.', user: $user);
 
             return $this->authPayload($user, remember: false);
         });
@@ -70,7 +69,7 @@ class AuthService
             throw new AuthenticationException('Akun Anda telah dinonaktifkan.');
         }
 
-        $this->logActivity($user, ActivityAction::Login, $user->name.' login ke sistem.');
+        $this->activityLogService->record(ActivityAction::Login, $user->name.' login ke sistem.', user: $user);
 
         $user->load('roles', 'permissions');
 
@@ -79,7 +78,7 @@ class AuthService
 
     public function logout(User $user): void
     {
-        $this->logActivity($user, ActivityAction::Logout, $user->name.' keluar dari sistem.');
+        $this->activityLogService->record(ActivityAction::Logout, $user->name.' keluar dari sistem.', user: $user);
 
         $user->currentAccessToken()?->delete();
     }
@@ -119,17 +118,6 @@ class AuthService
                 'email' => [self::RESET_STATUS_MESSAGES[$status] ?? 'Reset password gagal. Silakan coba lagi.'],
             ]);
         }
-    }
-
-    private function logActivity(User $user, ActivityAction $action, string $description): void
-    {
-        $this->activityLogRepository->create([
-            'user_id' => $user->id,
-            'project_id' => null,
-            'action' => $action,
-            'description' => $description,
-            'properties' => ['email' => $user->email],
-        ]);
     }
 
     private function authPayload(User $user, bool $remember): array

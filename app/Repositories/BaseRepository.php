@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Repositories\Contracts\RepositoryContract;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 abstract class BaseRepository implements RepositoryContract
 {
@@ -67,5 +68,57 @@ abstract class BaseRepository implements RepositoryContract
     public function delete(int|string $id): bool
     {
         return (bool) $this->findOrFail($id)->delete();
+    }
+
+    protected function monthExpression(string $column): string
+    {
+        return match (DB::connection()->getDriverName()) {
+            'pgsql' => "TO_CHAR({$column}, 'YYYY-MM')",
+            'mysql' => "DATE_FORMAT({$column}, '%Y-%m')",
+            default => "strftime('%Y-%m', {$column})",
+        };
+    }
+
+    protected function likePattern(string $search): string
+    {
+        return '%'.addcslashes(mb_strtolower($search), '%_\\').'%';
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    protected function statusCountsFor(string $statusColumn = 'status', ?string $scopedColumn = null, ?string $scopedValue = null): array
+    {
+        return $this->model->query()
+            ->when($scopedColumn !== null && $scopedValue !== null, fn ($query) => $query->where($scopedColumn, $scopedValue))
+            ->selectRaw("{$statusColumn}, COUNT(*) as total")
+            ->groupBy($statusColumn)
+            ->pluck('total', $statusColumn)
+            ->map(fn ($total) => (int) $total)
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{month: string, total: int}>
+     */
+    protected function monthlyStatsFor(?string $scopedColumn = null, ?string $scopedValue = null, int $months = 6): array
+    {
+        $counts = $this->model->query()
+            ->when($scopedColumn !== null && $scopedValue !== null, fn ($query) => $query->where($scopedColumn, $scopedValue))
+            ->where('created_at', '>=', now()->subMonths($months - 1)->startOfMonth())
+            ->selectRaw($this->monthExpression('created_at').' as month, COUNT(*) as total')
+            ->groupBy('month')
+            ->pluck('total', 'month')
+            ->map(fn ($total) => (int) $total)
+            ->all();
+
+        $result = [];
+
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $month = now()->subMonths($i)->format('Y-m');
+            $result[] = ['month' => $month, 'total' => $counts[$month] ?? 0];
+        }
+
+        return $result;
     }
 }

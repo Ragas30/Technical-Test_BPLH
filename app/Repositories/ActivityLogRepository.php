@@ -42,7 +42,7 @@ class ActivityLogRepository extends BaseRepository
             ->with(['user:id,name', 'project:id,project_number,title'])
             ->when($userId !== null, fn ($query) => $query->where('user_id', $userId))
             ->when($dto->search !== null, fn ($query) => $query->where(function ($query) use ($dto): void {
-                $pattern = '%'.addcslashes(mb_strtolower($dto->search), '%_\\').'%';
+                $pattern = $this->likePattern($dto->search);
 
                 $query->whereRaw('LOWER(description) LIKE ?', [$pattern])
                     ->orWhereHas('user', fn ($query) => $query->whereRaw('LOWER(name) LIKE ?', [$pattern]));

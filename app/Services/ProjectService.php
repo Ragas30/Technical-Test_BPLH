@@ -10,7 +10,6 @@ use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\User;
 use App\Notifications\ProjectSubmittedNotification;
-use App\Repositories\ActivityLogRepository;
 use App\Repositories\ProjectRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -23,7 +22,7 @@ class ProjectService
 {
     public function __construct(
         private readonly ProjectRepository $projectRepository,
-        private readonly ActivityLogRepository $activityLogRepository,
+        private readonly ActivityLogService $activityLogService,
         private readonly UserRepository $userRepository,
     ) {}
 
@@ -56,7 +55,7 @@ class ProjectService
                 'submitted_at' => null,
             ]);
 
-            $this->logActivity($project, ActivityAction::ProjectCreated, 'Project '.$project->title.' dibuat.');
+            $this->activityLogService->record(ActivityAction::ProjectCreated, 'Project '.$project->title.' dibuat.', project: $project);
 
             return $project->load('user:id,name,email');
         });
@@ -81,7 +80,7 @@ class ProjectService
             $this->projectRepository->update($id, $attributes);
             $project->refresh();
 
-            $this->logActivity($project, ActivityAction::ProjectUpdated, 'Project '.$project->title.' diperbarui.');
+            $this->activityLogService->record(ActivityAction::ProjectUpdated, 'Project '.$project->title.' diperbarui.', project: $project);
 
             return $project->load('user:id,name,email');
         });
@@ -96,7 +95,7 @@ class ProjectService
 
             $this->projectRepository->delete($id);
 
-            $this->logActivity($project, ActivityAction::ProjectDeleted, 'Project '.$project->title.' dihapus.');
+            $this->activityLogService->record(ActivityAction::ProjectDeleted, 'Project '.$project->title.' dihapus.', project: $project);
         });
     }
 
@@ -112,7 +111,7 @@ class ProjectService
                 'submitted_at' => now(),
             ]);
 
-            $this->logActivity($project, ActivityAction::ProjectSubmitted, 'Project '.$project->title.' diajukan untuk review.');
+            $this->activityLogService->record(ActivityAction::ProjectSubmitted, 'Project '.$project->title.' diajukan untuk review.', project: $project);
 
             return $project->load('user:id,name,email');
         });
@@ -138,16 +137,5 @@ class ProjectService
                 'status' => ['Project dengan status ini tidak dapat diajukan.'],
             ]);
         }
-    }
-
-    private function logActivity(Project $project, ActivityAction $action, string $description): void
-    {
-        $this->activityLogRepository->create([
-            'user_id' => auth()->id(),
-            'project_id' => $project->id,
-            'action' => $action,
-            'description' => $description,
-            'properties' => ['project_number' => $project->project_number],
-        ]);
     }
 }

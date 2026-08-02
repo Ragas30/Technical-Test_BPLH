@@ -1,60 +1,168 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# DocFlow — Document Submission & Approval Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+DocFlow adalah aplikasi pengelolaan permohonan dokumen secara digital dengan workflow approval yang
+terstruktur. Pemohon dapat mengajukan permohonan, mengunggah dokumen pendukung, memantau status, dan
+menerima hasil penilaian. Penilai dapat meninjau dokumen, memberikan catatan, meminta revisi,
+menyetujui, atau menolak permohonan. Seluruh aktivitas tercatat dalam histori yang dapat ditelusuri.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Layer      | Teknologi                                              |
+| ---------- | ------------------------------------------------------ |
+| Backend    | Laravel 12 (REST API)                                  |
+| Frontend   | Vue 3 + Vue Router + Pinia                             |
+| UI         | TailwindCSS + DaisyUI                                  |
+| Database   | PostgreSQL (produksi), SQLite (testing)                |
+| Auth       | Laravel Sanctum (token)                                |
+| AuthZ      | Spatie Laravel Permission                              |
+| Export     | PhpSpreadsheet (Excel), Dompdf (PDF)                   |
+| API Docs   | Scramble (`/docs/api`)                                 |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Fitur
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Authentication** — register, login, logout, forgot/reset password, profil, ganti password
+- **Dashboard** — ringkasan sesuai role (admin, reviewer, applicant) dengan statistik & grafik bulanan
+- **User Management** — CRUD user, role, permission (khusus admin)
+- **Project Management** — buat, ubah, hapus draft, submit permohonan
+- **Document Management** — upload multi-file, download, preview, ganti, dan hapus dokumen
+  (format: PDF, DOC, DOCX, XLSX; maks 10 MB per file)
+- **Review** — mulai review, catatan/komentar, request revisi, approve, reject
+- **Revision** — pemohon mengubah dokumen/project lalu submit kembali
+- **History** — timeline approval/revisi dan activity log (dengan cursor pagination)
+- **Notification** — notifikasi dalam aplikasi per pengguna
+- **Export** — export Excel & PDF untuk project dan review
 
-## Learning Laravel
+## Workflow Status
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+Draft ──► Submitted ──► Under Review ──► Approved
+   ▲           ▲             │
+   │           │             ├──► Revision ──► (edit) ──► Submitted
+   │           │             └──► Rejected
+   └─── (edit/hapus draft) ───┘
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Requirements
 
-## Contributing
+- PHP >= 8.3 (dengan ekstensi `pdo_pgsql` / `pdo_sqlite`, `sqlite3`)
+- Composer
+- Node.js + npm
+- PostgreSQL 14+ (untuk produksi)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Instalasi
 
-## Code of Conduct
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed        # membuat tabel + seeder role/permission/admin
+npm install
+npm run build
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Atau gunakan satu perintah:
 
-## Security Vulnerabilities
+```bash
+composer run setup
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Konfigurasi
 
-## License
+Salin `.env.example` ke `.env` lalu sesuaikan:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# Technical-Test_BPLH
-# Technical-Test_BPLH
+- `DB_*` — koneksi PostgreSQL
+- `QUEUE_CONNECTION` — `database` (default) atau `redis` bila Redis tersedia
+- `CACHE_STORE` — `database` (default) atau `redis`
+- `SANCTUM_STATEFUL_DOMAINS` / `CORS_ALLOWED_ORIGINS` — domain frontend/backend saat development
+
+### Seeder
+
+```bash
+php artisan db:seed
+```
+
+Seeder membuat role (`admin`, `reviewer`, `applicant`), seluruh permission, akun admin default, serta **1000 akun pemohon** (`pemohon001@docflow.test` … `pemohon1000@docflow.test`) dan **1000 akun penilai** (`penilai001@docflow.test` … `penilai1000@docflow.test`) dengan 1000 Project Permohonan (`php artisan db:seed` otomatis menjalankan `BulkDataSeeder`).
+
+Bila hanya ingin data bulk (tanpa mengulang semua):
+
+```bash
+php artisan db:seed --class=BulkDataSeeder
+```
+
+Seluruh akun seeder menggunakan password `password` (kecuali diubah lewat `DatabaseSeeder`).
+
+## Menjalankan (Development)
+
+```bash
+composer run dev
+```
+
+Perintah tersebut menjalankan secara bersamaan: server Laravel, queue worker, log, dan Vite.
+Alternatif manual:
+
+```bash
+php artisan serve          # terminal 1
+npm run dev                # terminal 2
+php artisan queue:work     # terminal 3 (untuk antrian)
+```
+
+Frontend diakses melalui `http://localhost:8000` (dengan `APP_URL` sesuai konfigurasi).
+
+### Cara Akses & Verifikasi Request API di Network Browser
+
+Aplikasi diakses lewat `http://localhost:8000` — **bukan** `http://localhost:5173`
+(5173 adalah Vite dev server, bukan alamat aplikasi).
+
+- **Mode Production (single-origin):** pastikan `npm run build` sudah dijalankan dan file
+  `public/hot` **tidak ada** (`Remove-Item public/hot` bila tersisa dari sesi dev). Dengan begitu
+  halaman, aset, dan seluruh request API dilayani dari port 8000 yang sama, sehingga setiap
+  response API (`/api/*`) tampil di tab **Network** DevTools.
+- **Mode Development (hot reload):** jalankan `npm run dev` (membuat ulang `public/hot`). Halaman
+  di 8000 memuat modul JS dari Vite, sedangkan request API tetap same-origin ke 8000 dan tetap
+  tampil di Network.
+
+Catatan: halaman login belum melakukan request API apa pun sampai Anda menekan tombol masuk —
+request `POST /api/auth/login`, `/api/dashboard`, dst. baru muncul di Network setelah login/navigasi.
+
+> Tips: set `DEBUGBAR_ENABLED=false` di `.env` bila ingin tampilan Network bersih (hanya request
+> `/api/*`). Debugbar aktif menghasilkan banyak request ekstra (`/_debugbar/*`) yang bisa memenuhi
+> buffer response DevTools sehingga body response API tidak tampil. Navigasi antar-menu pada SPA
+> tidak me-reload halaman — buka DevTools **sebelum** mengklik menu agar request terekam.
+
+## API Documentation
+
+Dokumentasi API interaktif tersedia pada `/docs/api` (Scramble) setelah aplikasi berjalan.
+
+## Testing
+
+```bash
+composer run test          # php artisan test
+```
+
+Suite berisi 117 test (unit + feature) mencakup auth, role & permission, user, project, dokumen,
+review & alur revisi, dashboard, notifikasi, activity log, dan export. Testing memakai SQLite
+in-memory agar cepat dan tidak membutuhkan PostgreSQL.
+
+## Code Style
+
+```bash
+vendor/bin/pint              # PHP Code Style Fixer
+npm run lint                 # ESLint (frontend, zero warning)
+npm run format:check         # Prettier check
+```
+
+## Arsitektur
+
+Proyek menerapkan Clean Architecture dengan lapisan:
+
+- **Controller** — hanya menangani HTTP (`authorize` + delegasi ke Service + Resource)
+- **FormRequest** — seluruh validasi input
+- **DTO** — transfer data antar lapisan
+- **Service** — business logic
+- **Repository** — seluruh query database
+- **API Resource** — struktur response
+- **Enum** — seluruh status domain (`ProjectStatus`, `ReviewStatus`, `ActivityAction`, `ReviewAction`, `Role`, `Permission`)
+
+Alur umum: `Route → Controller → FormRequest → Service → Repository → Model`, response melalui
+`Resource`. Status project dan review tidak pernah ditulis sebagai string literal di dalam logic —
+selalu melalui enum.

@@ -10,7 +10,6 @@ use App\DTO\User\UserQueryDTO;
 use App\Enums\ActivityAction;
 use App\Enums\Role;
 use App\Models\User;
-use App\Repositories\ActivityLogRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +19,7 @@ class UserService
 {
     public function __construct(
         private readonly UserRepository $userRepository,
-        private readonly ActivityLogRepository $activityLogRepository,
+        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function paginate(UserQueryDTO $dto): LengthAwarePaginator
@@ -49,7 +48,7 @@ class UserService
                 $user->syncPermissions($dto->permissions);
             }
 
-            $this->logActivity($user, ActivityAction::UserCreated, 'Pengguna '.$user->name.' dibuat.');
+            $this->activityLogService->record(ActivityAction::UserCreated, 'Pengguna '.$user->name.' dibuat.', user: $user);
 
             return $user->load('roles', 'permissions');
         });
@@ -87,7 +86,7 @@ class UserService
                 $user->syncPermissions($dto->permissions);
             }
 
-            $this->logActivity($user, ActivityAction::UserUpdated, 'Pengguna '.$user->name.' diperbarui.');
+            $this->activityLogService->record(ActivityAction::UserUpdated, 'Pengguna '.$user->name.' diperbarui.', user: $user);
 
             return $user->load('roles', 'permissions');
         });
@@ -107,7 +106,7 @@ class UserService
             $user->tokens()->delete();
             $user->delete();
 
-            $this->logActivity($user, ActivityAction::UserDeleted, 'Pengguna '.$user->name.' dihapus.');
+            $this->activityLogService->record(ActivityAction::UserDeleted, 'Pengguna '.$user->name.' dihapus.', user: $user);
         });
     }
 
@@ -117,7 +116,7 @@ class UserService
             $user = $this->userRepository->findWithTrashed($id);
             $user->restore();
 
-            $this->logActivity($user, ActivityAction::UserRestored, 'Pengguna '.$user->name.' dipulihkan.');
+            $this->activityLogService->record(ActivityAction::UserRestored, 'Pengguna '.$user->name.' dipulihkan.', user: $user);
 
             return $user->load('roles', 'permissions');
         });
@@ -144,16 +143,5 @@ class UserService
         $user->syncPermissions($dto->permissions);
 
         return $user->load('roles', 'permissions');
-    }
-
-    private function logActivity(User $user, ActivityAction $action, string $description): void
-    {
-        $this->activityLogRepository->create([
-            'user_id' => auth()->id(),
-            'project_id' => null,
-            'action' => $action,
-            'description' => $description,
-            'properties' => ['email' => $user->email],
-        ]);
     }
 }

@@ -14,4 +14,16 @@ enum ProjectStatus: string
     case Revision = 'revision';
     case Rejected = 'rejected';
     case Approved = 'approved';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Draft => 'Draft',
+            self::Submitted => 'Diajukan',
+            self::UnderReview => 'Sedang Ditinjau',
+            self::Revision => 'Revisi',
+            self::Rejected => 'Ditolak',
+            self::Approved => 'Disetujui',
+        };
+    }
 }

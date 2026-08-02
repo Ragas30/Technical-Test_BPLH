@@ -41,10 +41,10 @@ class UserRepository extends BaseRepository
     public function paginateWithFilters(UserQueryDTO $dto): LengthAwarePaginator
     {
         return User::query()
-            ->with(['roles', 'permissions'])
+            ->with(['roles.permissions', 'permissions'])
             ->when($dto->withTrashed, fn ($query) => $query->withTrashed())
             ->when($dto->search !== null, fn ($query) => $query->where(function ($query) use ($dto): void {
-                $pattern = '%'.addcslashes(mb_strtolower($dto->search), '%_\\').'%';
+                $pattern = $this->likePattern($dto->search);
 
                 $query->whereRaw('LOWER(name) LIKE ?', [$pattern])
                     ->orWhereRaw('LOWER(email) LIKE ?', [$pattern]);

@@ -13,4 +13,15 @@ enum ReviewStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Revision = 'revision';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Pending => 'Menunggu',
+            self::UnderReview => 'Sedang Ditinjau',
+            self::Approved => 'Disetujui',
+            self::Rejected => 'Ditolak',
+            self::Revision => 'Revisi',
+        };
+    }
 }
