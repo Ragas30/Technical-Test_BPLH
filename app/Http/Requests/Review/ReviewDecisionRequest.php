@@ -15,6 +15,11 @@ class ReviewDecisionRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Catatan keputusan review. Wajib diisi untuk reject dan revisi.
+             *
+             * @example Dokumen teknis sudah sesuai, namun perlu tambahan detail kapasitas.
+             */
             'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ];
     }

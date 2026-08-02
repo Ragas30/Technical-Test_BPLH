@@ -2,6 +2,7 @@
     import { useRoute, useRouter } from 'vue-router';
     import { useAuthStore } from '../stores/auth';
     import { initials } from '../utils/format';
+    import NotificationBell from '../components/NotificationBell.vue';
     import ToastHost from '../components/ToastHost.vue';
 
     const route = useRoute();
@@ -43,6 +44,8 @@
                 </div>
 
                 <div class="flex-none">
+                    <NotificationBell />
+
                     <div class="dropdown dropdown-end">
                         <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
                             <div

@@ -2,12 +2,13 @@
     import { computed, onMounted, reactive, ref, watch } from 'vue';
     import AppLayout from '../../layouts/AppLayout.vue';
     import ConfirmModal from '../../components/ConfirmModal.vue';
+    import PaginationBar from '../../components/PaginationBar.vue';
     import ProjectFormModal from '../../components/ProjectFormModal.vue';
     import { projectService } from '../../services/projects';
     import { reviewService } from '../../services/reviews';
+    import { exportService } from '../../services/exports';
     import { useAuthStore } from '../../stores/auth';
     import { useToastStore } from '../../stores/toast';
-    import { useInfiniteScroll } from '../../composables/useInfiniteScroll';
     import { PROJECT_STATUS } from '../../constants/roles';
     import { formatDate } from '../../utils/format';
 
@@ -33,6 +34,7 @@
     const confirmModalOpen = ref(false);
     const confirmModalRef = ref(null);
     const confirmAction = ref(null);
+    const exporting = ref(false);
 
     const isApplicant = computed(() => auth.isApplicant);
 
@@ -52,10 +54,8 @@
         return auth.hasPermission('review.start') && project.status === 'submitted';
     }
 
-    async function fetchProjects(append = false) {
-        if (!append) {
-            loading.value = true;
-        }
+    async function fetchProjects() {
+        loading.value = true;
 
         const params = {
             search: query.search || undefined,
@@ -68,26 +68,19 @@
 
         try {
             const { data } = isApplicant.value ? await projectService.mine(params) : await projectService.list(params);
-            projects.value = append ? [...projects.value, ...data.data] : data.data;
+            projects.value = data.data;
             meta.value = data.meta;
         } catch {
             toast.error('Gagal memuat data project.');
-            if (append && query.page > 1) {
-                query.page -= 1;
-            }
         } finally {
             loading.value = false;
         }
     }
 
-    async function appendProjects() {
-        if (!meta.value?.next_page_url) return;
-
-        query.page += 1;
-        await fetchProjects(true);
+    function goToPage(page) {
+        query.page = page;
+        fetchProjects();
     }
-
-    const { loadingMore, sentinel, loadMore } = useInfiniteScroll(appendProjects);
 
     function sortBy(field) {
         if (query.sort_by === field) {
@@ -211,6 +204,24 @@
         }
     }
 
+    async function exportProjects(kind) {
+        if (exporting.value) return;
+
+        exporting.value = true;
+
+        try {
+            await (kind === 'excel' ? exportService.projectsExcel : exportService.projectsPdf)({
+                search: query.search || undefined,
+                status: query.status || undefined,
+            });
+            toast.success('Export berhasil diunduh.');
+        } catch (error) {
+            toast.error(error?.response?.data?.message ?? 'Gagal melakukan export.');
+        } finally {
+            exporting.value = false;
+        }
+    }
+
     let searchTimer = null;
     watch(
         () => query.search,
@@ -241,24 +252,44 @@
                 <h2 class="text-2xl font-semibold">{{ isApplicant ? 'Project Saya' : 'Manajemen Project' }}</h2>
                 <p v-if="isApplicant" class="text-sm text-base-content/60">Kelola pengajuan project Anda.</p>
             </div>
-            <button
-                v-if="auth.hasPermission('project.create')"
-                type="button"
-                class="btn btn-primary"
-                @click="openCreate"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="2"
-                    stroke="currentColor"
-                    class="h-5 w-5"
+            <div class="flex flex-wrap items-center gap-2">
+                <button
+                    v-if="auth.hasPermission('export.excel')"
+                    type="button"
+                    class="btn btn-outline btn-sm"
+                    :disabled="exporting"
+                    @click="exportProjects('excel')"
                 >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Buat Project
-            </button>
+                    Export Excel
+                </button>
+                <button
+                    v-if="auth.hasPermission('export.pdf')"
+                    type="button"
+                    class="btn btn-outline btn-sm"
+                    :disabled="exporting"
+                    @click="exportProjects('pdf')"
+                >
+                    Export PDF
+                </button>
+                <button
+                    v-if="auth.hasPermission('project.create')"
+                    type="button"
+                    class="btn btn-primary"
+                    @click="openCreate"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        class="h-5 w-5"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Buat Project
+                </button>
+            </div>
         </div>
 
         <div class="mt-6 flex flex-wrap items-end gap-3">
@@ -370,22 +401,7 @@
             </table>
         </div>
 
-        <div v-if="meta" ref="sentinel" class="mt-4 flex flex-col items-center gap-3">
-            <p class="text-sm text-base-content/60">
-                Menampilkan {{ meta.from ?? 0 }}-{{ meta.to ?? 0 }} dari {{ meta.total }} project
-            </p>
-            <button
-                v-if="meta.next_page_url"
-                type="button"
-                class="btn btn-sm btn-outline"
-                :disabled="loadingMore"
-                @click="loadMore"
-            >
-                <span v-if="loadingMore" class="loading loading-spinner loading-sm" />
-                {{ loadingMore ? 'Memuat...' : 'Muat Lebih Banyak' }}
-            </button>
-            <p v-else-if="meta.total > 0" class="text-sm text-base-content/50">Semua data sudah dimuat.</p>
-        </div>
+        <PaginationBar v-if="meta" :meta="meta" item-label="project" @page-change="goToPage" />
 
         <ProjectFormModal v-model="formModalOpen" :project-id="editingProjectId" @saved="onSaved" />
 

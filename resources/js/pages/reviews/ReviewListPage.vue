@@ -1,10 +1,11 @@
 <script setup>
     import { onMounted, reactive, ref, watch } from 'vue';
     import AppLayout from '../../layouts/AppLayout.vue';
+    import PaginationBar from '../../components/PaginationBar.vue';
     import { reviewService } from '../../services/reviews';
+    import { exportService } from '../../services/exports';
     import { useAuthStore } from '../../stores/auth';
     import { useToastStore } from '../../stores/toast';
-    import { useInfiniteScroll } from '../../composables/useInfiniteScroll';
     import { REVIEW_STATUS } from '../../constants/roles';
     import { formatDate } from '../../utils/format';
 
@@ -20,11 +21,10 @@
     const reviews = ref([]);
     const meta = ref(null);
     const loading = ref(false);
+    const exporting = ref(false);
 
-    async function fetchReviews(append = false) {
-        if (!append) {
-            loading.value = true;
-        }
+    async function fetchReviews() {
+        loading.value = true;
 
         const params = {
             search: query.search || undefined,
@@ -35,26 +35,19 @@
 
         try {
             const { data } = await reviewService.list(params);
-            reviews.value = append ? [...reviews.value, ...data.data] : data.data;
+            reviews.value = data.data;
             meta.value = data.meta;
         } catch {
             toast.error('Gagal memuat data review.');
-            if (append && query.page > 1) {
-                query.page -= 1;
-            }
         } finally {
             loading.value = false;
         }
     }
 
-    async function appendReviews() {
-        if (!meta.value?.next_page_url) return;
-
-        query.page += 1;
-        await fetchReviews(true);
+    function goToPage(page) {
+        query.page = page;
+        fetchReviews();
     }
-
-    const { loadingMore, sentinel, loadMore } = useInfiniteScroll(appendReviews);
 
     let searchTimer = null;
     watch(
@@ -77,13 +70,53 @@
     );
 
     onMounted(fetchReviews);
+
+    async function exportReviews(kind) {
+        if (exporting.value) return;
+
+        exporting.value = true;
+
+        try {
+            await (kind === 'excel' ? exportService.reviewsExcel : exportService.reviewsPdf)({
+                search: query.search || undefined,
+                status: query.status || undefined,
+            });
+            toast.success('Export berhasil diunduh.');
+        } catch (error) {
+            toast.error(error?.response?.data?.message ?? 'Gagal melakukan export.');
+        } finally {
+            exporting.value = false;
+        }
+    }
 </script>
 
 <template>
     <AppLayout>
-        <div>
-            <h2 class="text-2xl font-semibold">Manajemen Review</h2>
-            <p class="text-sm text-base-content/60">Kelola proses review project.</p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-2xl font-semibold">Manajemen Review</h2>
+                <p class="text-sm text-base-content/60">Kelola proses review project.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button
+                    v-if="auth.hasPermission('export.excel')"
+                    type="button"
+                    class="btn btn-outline btn-sm"
+                    :disabled="exporting"
+                    @click="exportReviews('excel')"
+                >
+                    Export Excel
+                </button>
+                <button
+                    v-if="auth.hasPermission('export.pdf')"
+                    type="button"
+                    class="btn btn-outline btn-sm"
+                    :disabled="exporting"
+                    @click="exportReviews('pdf')"
+                >
+                    Export PDF
+                </button>
+            </div>
         </div>
 
         <div class="mt-6 flex flex-wrap items-end gap-3">
@@ -162,21 +195,6 @@
             </table>
         </div>
 
-        <div v-if="meta" ref="sentinel" class="mt-4 flex flex-col items-center gap-3">
-            <p class="text-sm text-base-content/60">
-                Menampilkan {{ meta.from ?? 0 }}-{{ meta.to ?? 0 }} dari {{ meta.total }} review
-            </p>
-            <button
-                v-if="meta.next_page_url"
-                type="button"
-                class="btn btn-sm btn-outline"
-                :disabled="loadingMore"
-                @click="loadMore"
-            >
-                <span v-if="loadingMore" class="loading loading-spinner loading-sm" />
-                {{ loadingMore ? 'Memuat...' : 'Muat Lebih Banyak' }}
-            </button>
-            <p v-else-if="meta.total > 0" class="text-sm text-base-content/50">Semua data sudah dimuat.</p>
-        </div>
+        <PaginationBar v-if="meta" :meta="meta" item-label="review" @page-change="goToPage" />
     </AppLayout>
 </template>

@@ -15,8 +15,20 @@ class ChangePasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Kata sandi aktif saat ini.
+             *
+             * @example password
+             */
             'current_password' => ['required', 'string', 'current_password'],
+
+            /**
+             * Kata sandi baru minimal 8 karakter.
+             *
+             * @example passwordBaru123
+             */
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password_confirmation' => ['required', 'string', 'same:password'],
         ];
     }
 

@@ -9,10 +9,13 @@ use App\Enums\ActivityAction;
 use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\User;
+use App\Notifications\ProjectSubmittedNotification;
 use App\Repositories\ActivityLogRepository;
 use App\Repositories\ProjectRepository;
+use App\Repositories\UserRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -21,6 +24,7 @@ class ProjectService
     public function __construct(
         private readonly ProjectRepository $projectRepository,
         private readonly ActivityLogRepository $activityLogRepository,
+        private readonly UserRepository $userRepository,
     ) {}
 
     public function paginate(ProjectQueryDTO $dto, ?string $userId = null): LengthAwarePaginator
@@ -98,7 +102,7 @@ class ProjectService
 
     public function submit(string $id): Project
     {
-        return DB::transaction(function () use ($id): Project {
+        $project = DB::transaction(function () use ($id): Project {
             $project = $this->projectRepository->findOrFail($id);
 
             $this->ensureSubmittable($project);
@@ -112,6 +116,10 @@ class ProjectService
 
             return $project->load('user:id,name,email');
         });
+
+        Notification::send($this->userRepository->reviewers(), new ProjectSubmittedNotification($project));
+
+        return $project;
     }
 
     private function ensureDraft(Project $project, string $message): void

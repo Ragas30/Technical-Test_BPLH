@@ -10,12 +10,17 @@ use App\Enums\ReviewStatus;
 use App\Models\Project;
 use App\Models\Review;
 use App\Models\User;
+use App\Notifications\CommentAddedNotification;
+use App\Notifications\ReviewDecisionNotification;
+use App\Notifications\ReviewStartedNotification;
 use App\Repositories\ActivityLogRepository;
 use App\Repositories\ProjectRepository;
 use App\Repositories\ReviewLogRepository;
 use App\Repositories\ReviewRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Validation\ValidationException;
 
 class ReviewService
@@ -43,7 +48,7 @@ class ReviewService
 
     public function start(Project $project, User $reviewer): Review
     {
-        return DB::transaction(function () use ($project, $reviewer): Review {
+        $review = DB::transaction(function () use ($project, $reviewer): Review {
             $this->ensureCanStart($project);
 
             $review = $this->reviewRepository->create([
@@ -61,11 +66,15 @@ class ReviewService
 
             return $this->loadDetails($review);
         });
+
+        $this->notifyApplicant($review, new ReviewStartedNotification($project, $reviewer));
+
+        return $review;
     }
 
     public function approve(Review $review, User $user, ?string $notes): Review
     {
-        return DB::transaction(function () use ($review, $user, $notes): Review {
+        $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->ensureUnderReview($review);
 
             $this->applyDecision(
@@ -81,11 +90,15 @@ class ReviewService
 
             return $this->loadDetails($review);
         });
+
+        $this->notifyApplicant($result, new ReviewDecisionNotification($result->project, $user, ReviewStatus::Approved, $notes));
+
+        return $result;
     }
 
     public function reject(Review $review, User $user, string $notes): Review
     {
-        return DB::transaction(function () use ($review, $user, $notes): Review {
+        $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->ensureUnderReview($review);
             $this->ensureNotes($notes);
 
@@ -102,11 +115,15 @@ class ReviewService
 
             return $this->loadDetails($review);
         });
+
+        $this->notifyApplicant($result, new ReviewDecisionNotification($result->project, $user, ReviewStatus::Rejected, $notes));
+
+        return $result;
     }
 
     public function requestRevision(Review $review, User $user, string $notes): Review
     {
-        return DB::transaction(function () use ($review, $user, $notes): Review {
+        $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->ensureUnderReview($review);
             $this->ensureNotes($notes);
 
@@ -123,16 +140,24 @@ class ReviewService
 
             return $this->loadDetails($review);
         });
+
+        $this->notifyApplicant($result, new ReviewDecisionNotification($result->project, $user, ReviewStatus::Revision, $notes));
+
+        return $result;
     }
 
     public function comment(Review $review, User $user, string $notes): Review
     {
-        return DB::transaction(function () use ($review, $user, $notes): Review {
+        $result = DB::transaction(function () use ($review, $user, $notes): Review {
             $this->logReviewAction($review->project, $review, $user, ReviewAction::Comment, $notes);
             $this->logActivity($review->project, ActivityAction::ReviewCommented, 'Komentar ditambahkan pada review project '.$review->project->title.'.');
 
             return $this->loadDetails($review);
         });
+
+        $this->notifyApplicant($result, new CommentAddedNotification($result->project, $user, $notes));
+
+        return $result;
     }
 
     private function applyDecision(
@@ -218,8 +243,18 @@ class ReviewService
     {
         return $review->load([
             'project:id,title,project_number,status,user_id',
+            'project.user:id,name',
             'reviewer:id,name,email',
             'logs.reviewer:id,name,email',
         ]);
+    }
+
+    private function notifyApplicant(Review $review, Notification $notification): void
+    {
+        $applicant = $review->project?->user;
+
+        if ($applicant !== null) {
+            NotificationFacade::send($applicant, $notification);
+        }
     }
 }

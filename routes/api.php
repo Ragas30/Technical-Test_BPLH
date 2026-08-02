@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\ExportController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\RoleController;
@@ -76,6 +78,13 @@ Route::middleware('auth:sanctum')->prefix('documents')->group(function () {
     Route::delete('{document}', [DocumentController::class, 'destroy'])->middleware('permission:'.Permission::DocumentDelete->value);
 });
 
+Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::get('unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::post('{notification}/read', [NotificationController::class, 'markAsRead'])->whereUuid('notification');
+});
+
 Route::middleware('auth:sanctum')->prefix('reviews')->group(function () {
     Route::get('/', [ReviewController::class, 'index'])->middleware('permission:'.Permission::ReviewViewAny->value);
     Route::get('{review}', [ReviewController::class, 'show'])->middleware('permission:'.Permission::ReviewView->value);
@@ -83,4 +92,11 @@ Route::middleware('auth:sanctum')->prefix('reviews')->group(function () {
     Route::post('{review}/reject', [ReviewController::class, 'reject'])->middleware('permission:'.Permission::ReviewReject->value);
     Route::post('{review}/revision', [ReviewController::class, 'revision'])->middleware('permission:'.Permission::ReviewRevision->value);
     Route::post('{review}/comment', [ReviewController::class, 'comment'])->middleware('permission:'.Permission::ReviewComment->value);
+});
+
+Route::middleware('auth:sanctum')->prefix('export')->group(function () {
+    Route::get('projects', [ExportController::class, 'projects'])->middleware('permission:'.Permission::ExportExcel->value);
+    Route::get('projects/pdf', [ExportController::class, 'projectsPdf'])->middleware('permission:'.Permission::ExportPdf->value);
+    Route::get('reviews', [ExportController::class, 'reviews'])->middleware('permission:'.Permission::ExportExcel->value);
+    Route::get('reviews/pdf', [ExportController::class, 'reviewsPdf'])->middleware('permission:'.Permission::ExportPdf->value);
 });

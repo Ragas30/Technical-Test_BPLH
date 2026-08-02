@@ -19,6 +19,7 @@ class IndexActivityLogRequest extends FormRequest
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
             'action' => ['sometimes', 'nullable', 'in:'.implode(',', ActivityAction::values())],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'cursor' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 

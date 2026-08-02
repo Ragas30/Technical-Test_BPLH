@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Notifications;
+
+use App\Models\Project;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Notification;
+
+class ProjectSubmittedNotification extends Notification implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(private readonly Project $project) {}
+
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(object $notifiable): array
+    {
+        return [
+            'title' => 'Project Diajukan',
+            'message' => 'Project '.$this->project->project_number.' diajukan untuk review.',
+            'type' => 'project_submitted',
+            'project_id' => $this->project->id,
+            'project_number' => $this->project->project_number,
+            'action_url' => '/projects/'.$this->project->id,
+        ];
+    }
+}

@@ -532,15 +532,15 @@ Export berhasil.
 
 # Phase 14 - API Documentation
 
-Generate API Documentation.
-
-Tambahkan contoh request.
-
-Tambahkan contoh response.
+- [x] Generate API Documentation.
+- [x] Tambahkan contoh request.
+- [x] Tambahkan contoh response.
 
 Definition of Done
 
-Seluruh endpoint terdokumentasi.
+- [x] Seluruh endpoint terdokumentasi.
+
+> STATUS: SELESAI — Scramble diaktifkan; route `/docs/api` (UI) & `/docs/api.json` melayani 42 path; SPA catch-all `/{any}` diperbaiki dengan regex `^(?!docs\/).*` agar tidak menelan `/docs/*`.
 
 ---
 
@@ -548,33 +548,24 @@ Seluruh endpoint terdokumentasi.
 
 Tambahkan
 
-Pagination
-
-Cursor Pagination
-
-Database Index
-
-Eager Loading
-
-Lazy Loading
-
-Cache
-
-Redis
-
-Queue
-
-Chunk
-
-Batch Insert
-
-Observer
+- [x] Pagination
+- [x] Cursor Pagination
+- [x] Database Index
+- [x] Eager Loading
+- [x] Lazy Loading (prevention)
+- [x] Cache
+- [x] Redis
+- [x] Queue
+- [x] Chunk
+- [x] Batch Insert
+- [x] Observer
 
 Definition of Done
 
-Tidak ada N+1 Query.
+- [x] Tidak ada N+1 Query.
+- [x] Dashboard menggunakan cache.
 
-Dashboard menggunakan cache.
+> STATUS: SELESAI — Redis kini didukung via `predis` fallback saat ekstensi `phpredis` tidak tersedia; aktivasi cukup dengan `CACHE_STORE=redis` dan/atau `QUEUE_CONNECTION=redis` pada environment yang menyediakan service Redis. Cache database tetap dipertahankan sebagai default aman. Dashboard tetap memakai versioned cache di `DashboardCache`, di-invalidate via Observer (Project/Review/User/ActivityLog). Index kinerja, batch insert dokumen, export chunk streaming, cursor pagination activity logs, dan `preventLazyLoading` aktif.
 
 ---
 

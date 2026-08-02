@@ -15,6 +15,11 @@ class CommentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Isi komentar untuk review.
+             *
+             * @example Mohon lampirkan dokumen kajian teknis yang lebih lengkap.
+             */
             'notes' => ['required', 'string', 'max:2000'],
         ];
     }

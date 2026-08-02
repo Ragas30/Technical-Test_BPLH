@@ -1,10 +1,10 @@
 <script setup>
     import { onMounted, reactive, ref, watch } from 'vue';
     import AppLayout from '../../layouts/AppLayout.vue';
+    import PaginationBar from '../../components/PaginationBar.vue';
     import { activityLogService } from '../../services/activityLogs';
     import { useAuthStore } from '../../stores/auth';
     import { useToastStore } from '../../stores/toast';
-    import { useInfiniteScroll } from '../../composables/useInfiniteScroll';
     import { ACTION_LABELS, ACTION_BADGES } from '../../constants/roles';
     import { formatDate } from '../../utils/format';
 
@@ -23,10 +23,8 @@
 
     const ACTION_OPTIONS = Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label }));
 
-    async function fetchActivities(append = false) {
-        if (!append) {
-            loading.value = true;
-        }
+    async function fetchActivities() {
+        loading.value = true;
 
         const params = {
             search: query.search || undefined,
@@ -39,26 +37,19 @@
 
         try {
             const { data } = await requester(params);
-            activities.value = append ? [...activities.value, ...data.data] : data.data;
+            activities.value = data.data;
             meta.value = data.meta;
         } catch {
             toast.error('Gagal memuat data aktivitas.');
-            if (append && query.page > 1) {
-                query.page -= 1;
-            }
         } finally {
             loading.value = false;
         }
     }
 
-    async function appendActivities() {
-        if (!meta.value?.next_page_url) return;
-
-        query.page += 1;
-        await fetchActivities(true);
+    function goToPage(page) {
+        query.page = page;
+        fetchActivities();
     }
-
-    const { loadingMore, sentinel, loadMore } = useInfiniteScroll(appendActivities);
 
     let searchTimer = null;
     watch(
@@ -173,21 +164,6 @@
             </ul>
         </div>
 
-        <div v-if="meta" ref="sentinel" class="mt-4 flex flex-col items-center gap-3">
-            <p class="text-sm text-base-content/60">
-                Menampilkan {{ meta.from ?? 0 }}-{{ meta.to ?? 0 }} dari {{ meta.total }} aktivitas
-            </p>
-            <button
-                v-if="meta.next_page_url"
-                type="button"
-                class="btn btn-sm btn-outline"
-                :disabled="loadingMore"
-                @click="loadMore"
-            >
-                <span v-if="loadingMore" class="loading loading-spinner loading-sm" />
-                {{ loadingMore ? 'Memuat...' : 'Muat Lebih Banyak' }}
-            </button>
-            <p v-else-if="meta.total > 0" class="text-sm text-base-content/50">Semua data sudah dimuat.</p>
-        </div>
+        <PaginationBar v-if="meta" :meta="meta" item-label="aktivitas" @page-change="goToPage" />
     </AppLayout>
 </template>

@@ -16,12 +16,47 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Nama lengkap pengguna.
+             *
+             * @example Siti Rahma
+             */
             'name' => ['required', 'string', 'max:255'],
+
+            /**
+             * Email pengguna.
+             *
+             * @example siti@docflow.test
+             */
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->route('user')?->id)->withoutTrashed()],
+
+            /**
+             * Kata sandi baru (opsional, kosongkan untuk tidak mengubah).
+             *
+             * @example passwordBaru123
+             */
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+
+            /**
+             * Status aktif pengguna.
+             *
+             * @example true
+             */
             'is_active' => ['sometimes', 'boolean'],
+
+            /**
+             * Daftar role yang dimiliki pengguna.
+             *
+             * @example ["reviewer"]
+             */
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['exists:roles,name'],
+
+            /**
+             * Daftar permission tambahan (opsional).
+             *
+             * @example ["document.download"]
+             */
             'permissions' => ['sometimes', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ];

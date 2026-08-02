@@ -2,10 +2,10 @@
     import { onMounted, reactive, ref, watch } from 'vue';
     import AppLayout from '../../layouts/AppLayout.vue';
     import ConfirmModal from '../../components/ConfirmModal.vue';
+    import PaginationBar from '../../components/PaginationBar.vue';
     import UserFormModal from '../../components/UserFormModal.vue';
     import { userService } from '../../services/users';
     import { useToastStore } from '../../stores/toast';
-    import { useInfiniteScroll } from '../../composables/useInfiniteScroll';
     import { ROLE_OPTIONS, roleLabel } from '../../constants/roles';
     import { formatDate, initials } from '../../utils/format';
 
@@ -32,10 +32,8 @@
     const confirmModalRef = ref(null);
     const confirmAction = ref(null);
 
-    async function fetchUsers(append = false) {
-        if (!append) {
-            loading.value = true;
-        }
+    async function fetchUsers() {
+        loading.value = true;
 
         const params = {
             search: query.search || undefined,
@@ -50,26 +48,19 @@
 
         try {
             const { data } = await userService.list(params);
-            users.value = append ? [...users.value, ...data.data] : data.data;
+            users.value = data.data;
             meta.value = data.meta;
         } catch {
             toast.error('Gagal memuat data pengguna.');
-            if (append && query.page > 1) {
-                query.page -= 1;
-            }
         } finally {
             loading.value = false;
         }
     }
 
-    async function appendUsers() {
-        if (!meta.value?.next_page_url) return;
-
-        query.page += 1;
-        await fetchUsers(true);
+    function goToPage(page) {
+        query.page = page;
+        fetchUsers();
     }
-
-    const { loadingMore, sentinel, loadMore } = useInfiniteScroll(appendUsers);
 
     function sortBy(field) {
         if (query.sort_by === field) {
@@ -351,22 +342,7 @@
             </table>
         </div>
 
-        <div v-if="meta" ref="sentinel" class="mt-4 flex flex-col items-center gap-3">
-            <p class="text-sm text-base-content/60">
-                Menampilkan {{ meta.from ?? 0 }}-{{ meta.to ?? 0 }} dari {{ meta.total }} pengguna
-            </p>
-            <button
-                v-if="meta.next_page_url"
-                type="button"
-                class="btn btn-sm btn-outline"
-                :disabled="loadingMore"
-                @click="loadMore"
-            >
-                <span v-if="loadingMore" class="loading loading-spinner loading-sm" />
-                {{ loadingMore ? 'Memuat...' : 'Muat Lebih Banyak' }}
-            </button>
-            <p v-else-if="meta.total > 0" class="text-sm text-base-content/50">Semua data sudah dimuat.</p>
-        </div>
+        <PaginationBar v-if="meta" :meta="meta" item-label="pengguna" @page-change="goToPage" />
 
         <UserFormModal v-model="formModalOpen" :user-id="editingUserId" @saved="onSaved" />
 

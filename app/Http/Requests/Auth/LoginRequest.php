@@ -15,7 +15,18 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Email pengguna yang terdaftar.
+             *
+             * @example admin@docflow.test
+             */
             'email' => ['required', 'string', 'email', 'max:255'],
+
+            /**
+             * Kata sandi pengguna.
+             *
+             * @example password
+             */
             'password' => ['required', 'string'],
             'remember' => ['sometimes', 'boolean'],
         ];

@@ -29,14 +29,23 @@ class DashboardService
     public function for(User $user): array
     {
         if ($user->hasRole(Role::Admin)) {
-            return $this->adminDashboard();
+            return $this->cached(Role::Admin, null, fn (): array => $this->adminDashboard());
         }
 
         if ($user->hasRole(Role::Reviewer)) {
-            return $this->reviewerDashboard($user->id);
+            return $this->cached(Role::Reviewer, $user->id, fn (): array => $this->reviewerDashboard($user->id));
         }
 
-        return $this->applicantDashboard($user->id);
+        return $this->cached(Role::Applicant, $user->id, fn (): array => $this->applicantDashboard($user->id));
+    }
+
+    /**
+     * @param  callable(): array<string, mixed>  $resolver
+     * @return array<string, mixed>
+     */
+    private function cached(Role $role, ?string $userId, callable $resolver): array
+    {
+        return DashboardCache::remember($role, $userId, $resolver);
     }
 
     /**

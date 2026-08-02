@@ -15,7 +15,18 @@ class StoreProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Judul project.
+             *
+             * @example Pembangunan Instalasi Pengolahan Air Limbah Kawasan Industri
+             */
             'title' => ['required', 'string', 'max:255'],
+
+            /**
+             * Deskripsi singkat project.
+             *
+             * @example Pembangunan IPAL komunal untuk kawasan industri dengan kapasitas 100 m3/hari.
+             */
             'description' => ['nullable', 'string', 'max:5000'],
         ];
     }

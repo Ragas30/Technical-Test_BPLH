@@ -15,6 +15,11 @@ class AssignRolesRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Daftar role yang ditetapkan ke pengguna.
+             *
+             * @example ["reviewer"]
+             */
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['exists:roles,name'],
         ];

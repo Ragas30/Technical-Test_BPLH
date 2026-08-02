@@ -3,8 +3,10 @@
 namespace App\Repositories;
 
 use App\DTO\User\UserQueryDTO;
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 class UserRepository extends BaseRepository
 {
@@ -21,6 +23,14 @@ class UserRepository extends BaseRepository
     public function count(): int
     {
         return $this->model->count();
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function reviewers(): Collection
+    {
+        return $this->model->role(Role::Reviewer->value)->get(['id']);
     }
 
     public function findWithTrashed(string $id): User

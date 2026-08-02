@@ -40,8 +40,12 @@ class DocumentService
     public function upload(Project $project, array $dtos, User $user): Collection
     {
         return DB::transaction(function () use ($project, $dtos, $user): Collection {
-            $documents = collect($dtos)
-                ->map(fn (UploadDocumentDTO $dto): ProjectDocument => $this->storeFile($project, $dto->file, $user));
+            $attributes = collect($dtos)
+                ->map(fn (UploadDocumentDTO $dto): array => $this->storeFileAttributes($project, $dto->file, $user));
+
+            $this->documentRepository->insertMany($attributes->all());
+
+            $documents = $this->documentRepository->findManyWithUploader($attributes->pluck('id')->all());
 
             $this->logActivity($project, ActivityAction::DocumentUploaded, $documents->count().' dokumen diunggah ke project '.$project->title.'.');
 
@@ -79,7 +83,10 @@ class DocumentService
         });
     }
 
-    private function storeFile(Project $project, UploadedFile $file, User $user): ProjectDocument
+    /**
+     * @return array<string, mixed>
+     */
+    private function storeFileAttributes(Project $project, UploadedFile $file, User $user): array
     {
         $originalName = $file->getClientOriginalName();
         $extension = strtolower($file->getClientOriginalExtension());
@@ -94,7 +101,8 @@ class DocumentService
             ]);
         }
 
-        return $this->documentRepository->create([
+        return [
+            'id' => (string) Str::uuid(),
             'project_id' => $project->id,
             'uploaded_by' => $user->id,
             'name' => $originalName,
@@ -103,7 +111,7 @@ class DocumentService
             'mime_type' => $file->getMimeType(),
             'extension' => $extension,
             'size' => $file->getSize(),
-        ]);
+        ];
     }
 
     private function storeFileReplacement(ProjectDocument $document, UploadedFile $file): void

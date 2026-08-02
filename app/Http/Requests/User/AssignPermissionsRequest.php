@@ -15,6 +15,11 @@ class AssignPermissionsRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Daftar permission yang ditetapkan ke pengguna.
+             *
+             * @example ["document.download", "review.view_any"]
+             */
             'permissions' => ['required', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ];

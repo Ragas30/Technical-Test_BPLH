@@ -15,6 +15,12 @@ class ReplaceDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Berkas pengganti dokumen (format multipart/form-data).
+             * Ekstensi yang diizinkan: pdf, doc, docx, xlsx.
+             *
+             * @example {"name":"dokumen-baru.pdf","type":"application/pdf"}
+             */
             'file' => [
                 'required',
                 'file',

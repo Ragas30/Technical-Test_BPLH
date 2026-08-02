@@ -15,6 +15,39 @@ class ReviewRepository extends BaseRepository
         $this->model = new Review;
     }
 
+    public function filtered(?string $search = null, ?string $status = null): Collection
+    {
+        return $this->model->query()
+            ->with(['project:id,title,project_number,status', 'reviewer:id,name,email'])
+            ->when($search !== null, fn ($query) => $query->whereHas('project', function ($query) use ($search): void {
+                $pattern = '%'.addcslashes(mb_strtolower($search), '%_\\').'%';
+
+                $query->whereRaw('LOWER(title) LIKE ?', [$pattern])
+                    ->orWhereRaw('LOWER(project_number) LIKE ?', [$pattern]);
+            }))
+            ->when($status !== null, fn ($query) => $query->where('status', $status))
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * @param  callable(Collection<int, Review>): void  $callback
+     */
+    public function chunkFiltered(?string $search, ?string $status, int $size, callable $callback): void
+    {
+        $this->model->query()
+            ->with(['project:id,title,project_number,status', 'reviewer:id,name,email'])
+            ->when($search !== null, fn ($query) => $query->whereHas('project', function ($query) use ($search): void {
+                $pattern = '%'.addcslashes(mb_strtolower($search), '%_\\').'%';
+
+                $query->whereRaw('LOWER(title) LIKE ?', [$pattern])
+                    ->orWhereRaw('LOWER(project_number) LIKE ?', [$pattern]);
+            }))
+            ->when($status !== null, fn ($query) => $query->where('status', $status))
+            ->orderBy('created_at', 'desc')
+            ->chunk($size, $callback);
+    }
+
     public function hasActiveReview(string $projectId): bool
     {
         return $this->model->query()

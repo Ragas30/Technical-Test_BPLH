@@ -16,7 +16,17 @@ class StoreDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Daftar berkas dokumen yang diunggah (multiple upload, format multipart/form-data).
+             * Ekstensi yang diizinkan: pdf, doc, docx, xlsx.
+             */
             'documents' => ['required', 'array', 'min:1', 'max:'.config('documents.max_files_per_upload')],
+
+            /**
+             * Berkas individual dalam daftar dokumen.
+             *
+             * @example {"name":"dokumen.pdf","type":"application/pdf"}
+             */
             'documents.*' => [
                 'required',
                 'file',
