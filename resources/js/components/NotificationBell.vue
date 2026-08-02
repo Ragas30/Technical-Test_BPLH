@@ -1,31 +1,65 @@
 <script setup>
-    import { computed, onMounted, onUnmounted } from 'vue';
+    import { computed, onMounted, onUnmounted, ref } from 'vue';
     import { useRouter } from 'vue-router';
     import { useNotificationStore } from '../stores/notification';
     import { formatDate } from '../utils/format';
 
     const router = useRouter();
     const notification = useNotificationStore();
+    const isOpen = ref(false);
+    const rootRef = ref(null);
 
     const visibleItems = computed(() => notification.items.slice(0, 8));
 
-    function openNotification(item) {
+    async function openNotification(item) {
         if (!item.read_at) {
-            notification.markAsRead(item.id);
+            await notification.markAsRead(item.id);
         }
+
+        isOpen.value = false;
 
         if (item.data?.action_url) {
             router.push(item.data.action_url);
         }
     }
 
+    async function markAllAsRead() {
+        await notification.markAllAsRead();
+    }
+
+    function toggleDropdown() {
+        isOpen.value = !isOpen.value;
+    }
+
+    function handleClickOutside(event) {
+        if (rootRef.value && !rootRef.value.contains(event.target)) {
+            isOpen.value = false;
+        }
+    }
+
+    function handleEscape(event) {
+        if (event.key === 'Escape') {
+            isOpen.value = false;
+        }
+    }
+
     onMounted(() => notification.startPolling());
+    onMounted(() => document.addEventListener('click', handleClickOutside));
+    onMounted(() => document.addEventListener('keydown', handleEscape));
     onUnmounted(() => notification.stopPolling());
+    onUnmounted(() => document.removeEventListener('click', handleClickOutside));
+    onUnmounted(() => document.removeEventListener('keydown', handleEscape));
 </script>
 
 <template>
-    <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn btn-ghost btn-circle" aria-label="Notifikasi">
+    <div ref="rootRef" class="relative">
+        <button
+            type="button"
+            class="btn btn-ghost btn-circle"
+            aria-label="Notifikasi"
+            :aria-expanded="isOpen"
+            @click="toggleDropdown"
+        >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -46,33 +80,34 @@
             >
                 {{ notification.unreadCount > 9 ? '9+' : notification.unreadCount }}
             </span>
-        </div>
+        </button>
 
-        <ul
-            tabindex="0"
-            class="menu dropdown-content z-[1] mt-2 w-80 rounded-box border border-base-300 bg-base-100 p-2 shadow"
+        <div
+            v-if="isOpen"
+            class="absolute right-0 z-[60] mt-2 w-[min(22rem,calc(100vw-1rem))] overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-xl"
         >
-            <li class="flex items-center justify-between px-3 py-2">
+            <div class="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3">
                 <span class="font-semibold">Notifikasi</span>
                 <button
                     type="button"
                     class="btn btn-ghost btn-xs text-primary"
                     :disabled="notification.unreadCount === 0"
-                    @click="notification.markAllAsRead()"
+                    @click="markAllAsRead"
                 >
                     Tandai semua dibaca
                 </button>
-            </li>
+            </div>
 
-            <div class="divider my-1" />
-
-            <li v-if="visibleItems.length === 0" class="pointer-events-none">
+            <div v-if="visibleItems.length === 0" class="pointer-events-none">
                 <div class="py-8 text-center text-sm text-base-content/50">Tidak ada notifikasi.</div>
-            </li>
+            </div>
 
-            <li v-for="item in visibleItems" :key="item.id" class="px-1">
-                <a
-                    class="flex items-start gap-3"
+            <div v-else class="max-h-96 overflow-y-auto p-2">
+                <button
+                    v-for="item in visibleItems"
+                    :key="item.id"
+                    type="button"
+                    class="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-base-200/80"
                     :class="{ 'bg-base-200/60': !item.read_at }"
                     @click="openNotification(item)"
                 >
@@ -83,12 +118,12 @@
                     />
                     <span v-else class="mt-2 h-2 w-2 shrink-0 rounded-full bg-transparent" />
                     <span class="min-w-0">
-                        <span class="block truncate text-sm font-medium">{{ item.data?.title }}</span>
-                        <span class="block truncate text-xs text-base-content/60">{{ item.data?.message }}</span>
+                        <span class="block text-sm font-medium leading-5">{{ item.data?.title }}</span>
+                        <span class="block text-xs leading-5 text-base-content/60">{{ item.data?.message }}</span>
                         <span class="block text-xs text-base-content/40">{{ formatDate(item.created_at) }}</span>
                     </span>
-                </a>
-            </li>
-        </ul>
+                </button>
+            </div>
+        </div>
     </div>
 </template>

@@ -77,7 +77,7 @@
                     <h1 class="text-lg font-semibold">{{ route.meta.title ?? 'DocFlow' }}</h1>
                 </div>
 
-                <div class="flex-none">
+                <div class="flex flex-none items-center gap-1">
                     <NotificationBell />
 
                     <div class="dropdown dropdown-end">
